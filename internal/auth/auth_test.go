@@ -57,13 +57,13 @@ func TestFromRequest(t *testing.T) {
 			expectedErrStr: "invalid api key",
 		},
 		{
-			name: "missing auth (no cookie, no api key, not development)",
-			envVars: map[string]string{},
-			setupRequest: func(r *http.Request) {},
+			name:           "missing auth (no cookie, no api key, not development)",
+			envVars:        map[string]string{},
+			setupRequest:   func(r *http.Request) {},
 			expectedErrStr: "missing auth",
 		},
 		{
-			name: "session auth unavailable (no secret)",
+			name:    "session auth unavailable (no secret)",
 			envVars: map[string]string{},
 			setupRequest: func(r *http.Request) {
 				r.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "some-value"})
