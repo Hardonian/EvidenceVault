@@ -1,6 +1,6 @@
 .PHONY: fmt vet test build smoke
 fmt:
-	gofmt -w ./cmd ./internal
+	@test -z "$(gofmt -l ./cmd ./internal)" || (echo 'gofmt required'; gofmt -l ./cmd ./internal; exit 1)
 vet:
 	go vet ./...
 test:
