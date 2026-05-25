@@ -33,6 +33,24 @@ func NewService(db *pgxpool.Pool, freeTierLimit int) *Service {
 	return &Service{db: db, freeTierLimit: freeTierLimit}
 }
 
+func deriveStatus(existing string, expiry *time.Time, reminderDays int, now time.Time) string {
+	if existing == "missing" || existing == "archived" {
+		return existing
+	}
+	if expiry == nil {
+		return "active"
+	}
+	today := time.Date(now.UTC().Year(), now.UTC().Month(), now.UTC().Day(), 0, 0, 0, 0, time.UTC)
+	expiryDay := time.Date(expiry.UTC().Year(), expiry.UTC().Month(), expiry.UTC().Day(), 0, 0, 0, 0, time.UTC)
+	if expiryDay.Before(today) {
+		return "expired"
+	}
+	if !expiryDay.After(today.AddDate(0, 0, reminderDays)) {
+		return "expiring"
+	}
+	return "active"
+}
+
 func Validate(it Item) error {
 	if strings.TrimSpace(it.Title) == "" {
 		return errors.New("title is required")
@@ -52,8 +70,8 @@ func Validate(it Item) error {
 	return nil
 }
 
-func (s *Service) List(ctx context.Context, tenantID string) ([]Item, error) { /* unchanged */
-	rows, err := s.db.Query(ctx, `select id, tenant_id, title, category, status, owner_name, owner_email, source_file_path, notes, reminder_days_before, created_at, updated_at from evidence_items where tenant_id=$1 order by created_at desc`, tenantID)
+func (s *Service) List(ctx context.Context, tenantID string) ([]Item, error) {
+	rows, err := s.db.Query(ctx, `select id, tenant_id, title, category, status, owner_name, owner_email, source_file_path, notes, issue_date, expiry_date, reminder_days_before, created_at, updated_at from evidence_items where tenant_id=$1 order by created_at desc`, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +79,7 @@ func (s *Service) List(ctx context.Context, tenantID string) ([]Item, error) { /
 	items := []Item{}
 	for rows.Next() {
 		var it Item
-		if err := rows.Scan(&it.ID, &it.TenantID, &it.Title, &it.Category, &it.Status, &it.OwnerName, &it.OwnerEmail, &it.SourceFilePath, &it.Notes, &it.ReminderDaysBefore, &it.CreatedAt, &it.UpdatedAt); err != nil {
+		if err := rows.Scan(&it.ID, &it.TenantID, &it.Title, &it.Category, &it.Status, &it.OwnerName, &it.OwnerEmail, &it.SourceFilePath, &it.Notes, &it.IssueDate, &it.ExpiryDate, &it.ReminderDaysBefore, &it.CreatedAt, &it.UpdatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, it)
@@ -70,6 +88,7 @@ func (s *Service) List(ctx context.Context, tenantID string) ([]Item, error) { /
 }
 
 func (s *Service) Create(ctx context.Context, tenantID string, it Item) (string, error) {
+	it.Status = deriveStatus(it.Status, it.ExpiryDate, it.ReminderDaysBefore, time.Now())
 	if err := Validate(it); err != nil {
 		return "", err
 	}
@@ -81,6 +100,36 @@ func (s *Service) Create(ctx context.Context, tenantID string, it Item) (string,
 		return "", errors.New("free tier limit reached")
 	}
 	id := uuid.NewString()
-	_, err := s.db.Exec(ctx, `insert into evidence_items (id, tenant_id, title, category, status, owner_name, owner_email, issue_date, expiry_date, reminder_days_before, source_file_path, notes) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, id, tenantID, it.Title, it.Category, it.Status, it.OwnerName, it.OwnerEmail, it.IssueDate, it.ExpiryDate, it.ReminderDaysBefore, it.SourceFilePath, it.Notes)
+	_, err := s.db.Exec(ctx, `insert into evidence_items (id, tenant_id, title, category, status, owner_name, owner_email, issue_date, expiry_date, reminder_days_before, source_file_path, notes, updated_at) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now())`, id, tenantID, it.Title, it.Category, it.Status, it.OwnerName, it.OwnerEmail, it.IssueDate, it.ExpiryDate, it.ReminderDaysBefore, it.SourceFilePath, it.Notes)
 	return id, err
+}
+
+func (s *Service) Update(ctx context.Context, tenantID, id string, it Item) error {
+	it.Status = deriveStatus(it.Status, it.ExpiryDate, it.ReminderDaysBefore, time.Now())
+	if err := Validate(it); err != nil {
+		return err
+	}
+	res, err := s.db.Exec(ctx, `update evidence_items set title=$3, category=$4, status=$5, owner_name=$6, owner_email=$7, issue_date=$8, expiry_date=$9, reminder_days_before=$10, notes=$11, updated_at=now() where tenant_id=$1 and id=$2`, tenantID, id, it.Title, it.Category, it.Status, it.OwnerName, it.OwnerEmail, it.IssueDate, it.ExpiryDate, it.ReminderDaysBefore, it.Notes)
+	if err != nil {
+		return err
+	}
+	if res.RowsAffected() == 0 {
+		return errors.New("not found")
+	}
+	return nil
+}
+
+func (s *Service) AttachFile(ctx context.Context, tenantID, evidenceID, filePath, contentType string, sizeBytes int64) error {
+	_, err := s.db.Exec(ctx, `insert into evidence_files (tenant_id, evidence_id, file_path, content_type, size_bytes) values ($1,$2,$3,$4,$5)`, tenantID, evidenceID, filePath, contentType, sizeBytes)
+	if err != nil {
+		return err
+	}
+	res, err := s.db.Exec(ctx, `update evidence_items set source_file_path=$3, updated_at=now() where tenant_id=$1 and id=$2`, tenantID, evidenceID, filePath)
+	if err != nil {
+		return err
+	}
+	if res.RowsAffected() == 0 {
+		return errors.New("evidence not found")
+	}
+	return nil
 }

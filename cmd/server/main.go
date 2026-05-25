@@ -10,9 +10,11 @@ import (
 	"syscall"
 	"time"
 
+	"evidencevault/internal/audit"
 	"evidencevault/internal/billing"
 	"evidencevault/internal/config"
 	"evidencevault/internal/db"
+	"evidencevault/internal/email"
 	"evidencevault/internal/evidence"
 	httpserver "evidencevault/internal/http"
 	"evidencevault/internal/proofpack"
@@ -36,7 +38,8 @@ func main() {
 	}
 	defer database.Pool.Close()
 	tmpl := template.Must(template.ParseGlob("templates/*.html"))
-	srv := &http.Server{Addr: cfg.Addr, Handler: httpserver.Server{Version: cfg.Version, Evidence: evidence.NewService(database.Pool, cfg.FreeTierLimit), Proofpack: proofpack.NewService(database.Pool), Reminders: reminders.NewService(database.Pool), Storage: storage.LocalClient{BasePath: "uploads"}, Billing: &billing.Service{PriceID: cfg.StripePriceID, BaseURL: cfg.BaseURL, WebhookSecret: cfg.StripeWebhookSecret, DB: database.Pool}, Templates: tmpl, CronSecret: cfg.CronSecret}.Routes()}
+	auditSvc := audit.NewService(database.Pool)
+	srv := &http.Server{Addr: cfg.Addr, Handler: httpserver.Server{Version: cfg.Version, Evidence: evidence.NewService(database.Pool, cfg.FreeTierLimit), Proofpack: proofpack.NewService(database.Pool, auditSvc), Reminders: reminders.NewService(database.Pool, email.LogSender{}, auditSvc), Storage: storage.LocalClient{BasePath: "uploads"}, Billing: &billing.Service{PriceID: cfg.StripePriceID, BaseURL: cfg.BaseURL, WebhookSecret: cfg.StripeWebhookSecret, DB: database.Pool, Audit: auditSvc}, Templates: tmpl, CronSecret: cfg.CronSecret}.Routes()}
 	go func() {
 		log.Printf("listening on %s", cfg.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

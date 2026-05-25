@@ -1,11 +1,38 @@
-# Security
+# EvidenceVault
 
-- Development mode (`APP_ENV=development`) allows header-based tenant/user auth for local testing only.
-- Production requires either:
-  - signed session cookie (`SESSION_SECRET`), or
-  - API key mapped through `API_KEYS` (`key:tenant_id,key2:tenant2`).
-- Tenant scope is enforced in service queries by `tenant_id` filters.
-- Stripe webhooks are signature-verified and idempotent (`stripe_events`).
+EvidenceVault is a compliance-operations utility. It helps teams track evidence, renewal reminders, audit history, and proofpack exports. It does **not** certify compliance or provide legal advice.
 
-Limitations:
-- No RBAC yet beyond tenant scoping and auth boundary.
+## Implemented now
+- Tenant-scoped evidence creation/list/update.
+- Free-tier write limit enforced in evidence service.
+- Evidence file upload requires `evidence_id` and creates `evidence_files` + updates `evidence_items.source_file_path`.
+- Reminder run uses evidence expiry data, logs `sent`/`failed`, and is idempotent per evidence/day/channel.
+- Proofpack generation persists payload and includes tenant, evidence, files, reminders, audit summary, generated timestamp, app version, and limitations statement.
+- Billing checkout/portal creation and stripe webhook processing write audit events.
+- `/app` uses persisted evidence and proofpack state.
+
+## Intentionally not implemented
+- Compliance certification workflows.
+- Legal interpretation of evidence quality.
+- Multi-channel reminder transports beyond email adapter.
+
+## Degraded modes
+- Storage unavailable: upload route returns HTTP 503 with explicit message.
+- Email adapter failure: reminder is logged as `failed` (not `sent`).
+- Stripe not configured/unavailable: billing routes return explicit errors.
+
+## Verification commands
+- `go mod tidy`
+- `gofmt -w ./...`
+- `go vet ./...`
+- `go test ./...`
+- `go build ./cmd/server`
+- `make smoke`
+
+## Pilot workflow
+1. Create dev tenant and auth headers.
+2. Create evidence (`POST /app/evidence`).
+3. Upload file with `evidence_id` (`POST /app/evidence/upload`).
+4. Run reminders (`POST /api/cron/reminders`).
+5. Generate proofpack (`POST /app/proofpacks`).
+6. Open `/app` for operational state.
