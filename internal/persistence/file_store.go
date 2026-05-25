@@ -41,7 +41,7 @@ func (f *FileStore) WithLock(fn func(*State) error) error {
 	return f.persistLocked()
 }
 func (f *FileStore) load() error {
-	files := map[string]any{"tenants.json": &f.state.Tenants, "evidence_items.json": &f.state.Evidence, "evidence_files.json": &f.state.EvidenceFile, "reminder_logs.json": &f.state.ReminderSent, "proofpacks.json": &f.state.Proofpacks, "audit_logs.json": &f.state.AuditLogs, "stripe_events.json": &f.state.StripeEvents, "review_snapshots.json": &f.state.ReviewSnapshots, "operational_events.json": &f.state.OperationalEvents}
+	files := map[string]any{"tenants.json": &f.state.Tenants, "evidence_items.json": &f.state.Evidence, "evidence_files.json": &f.state.EvidenceFile, "reminder_logs.json": &f.state.ReminderSent, "proofpacks.json": &f.state.Proofpacks, "audit_logs.json": &f.state.AuditLogs, "stripe_events.json": &f.state.StripeEvents, "review_snapshots.json": &f.state.ReviewSnapshots, "operational_events.json": &f.state.OperationalEvents, "activation_milestones.json": &f.state.Activation}
 	for n, tgt := range files {
 		p := filepath.Join(f.dir, n)
 		b, err := os.ReadFile(p)
@@ -61,7 +61,7 @@ func (f *FileStore) load() error {
 	return nil
 }
 func (f *FileStore) persistLocked() error {
-	files := map[string]any{"tenants.json": f.state.Tenants, "evidence_items.json": f.state.Evidence, "evidence_files.json": f.state.EvidenceFile, "reminder_logs.json": f.state.ReminderSent, "proofpacks.json": f.state.Proofpacks, "audit_logs.json": f.state.AuditLogs, "stripe_events.json": f.state.StripeEvents, "review_snapshots.json": f.state.ReviewSnapshots, "operational_events.json": f.state.OperationalEvents}
+	files := map[string]any{"tenants.json": f.state.Tenants, "evidence_items.json": f.state.Evidence, "evidence_files.json": f.state.EvidenceFile, "reminder_logs.json": f.state.ReminderSent, "proofpacks.json": f.state.Proofpacks, "audit_logs.json": f.state.AuditLogs, "stripe_events.json": f.state.StripeEvents, "review_snapshots.json": f.state.ReviewSnapshots, "operational_events.json": f.state.OperationalEvents, "activation_milestones.json": f.state.Activation}
 	for n, v := range files {
 		b, err := json.MarshalIndent(v, "", "  ")
 		if err != nil {
