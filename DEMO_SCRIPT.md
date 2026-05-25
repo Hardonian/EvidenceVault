@@ -10,3 +10,6 @@ Start in demo mode (`DEMO_MODE=true`) and tenant `pilot-demo`.
 - Show activation checklist progression and current maturity stage.
 - Walk through attention-needed drift warnings and unresolved trend.
 - Show CSV exports for trust portability.
+
+## Operational continuity memory
+EvidenceVault emphasizes deterministic operational memory, recurring reviews, and historical truth without AI or analytics theatre.

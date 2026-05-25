@@ -41,6 +41,33 @@ type ReviewSnapshot struct {
 	Disclaimer            string    `json:"disclaimer"`
 }
 
+type OperationalSnapshot struct {
+	TenantID               string    `json:"tenant_id"`
+	Date                   string    `json:"date"`
+	CreatedAt              time.Time `json:"created_at"`
+	UnresolvedCount        int       `json:"unresolved_count"`
+	ExpiredEvidenceCount   int       `json:"expired_evidence_count"`
+	OwnerlessEvidenceCount int       `json:"ownerless_evidence_count"`
+	StaleEvidenceCount     int       `json:"stale_evidence_count"`
+	HealthScore            int       `json:"health_score"`
+	ProofpackCount         int       `json:"proofpack_count"`
+	ReviewStreak           int       `json:"review_streak"`
+	ActivationPercent      int       `json:"activation_percent"`
+	MaturityStage          string    `json:"maturity_stage"`
+	TotalEvidenceCount     int       `json:"total_evidence_count"`
+	OwnersCount            int       `json:"owners_count"`
+}
+
+type ReviewReport struct {
+	TenantID    string    `json:"tenant_id"`
+	ID          string    `json:"id"`
+	GeneratedAt time.Time `json:"generated_at"`
+	Summary     string    `json:"summary"`
+	Markdown    string    `json:"markdown"`
+	PlainText   string    `json:"plain_text"`
+	HTML        string    `json:"html"`
+}
+
 type OperationalEvent struct {
 	TenantID  string    `json:"tenant_id"`
 	Type      string    `json:"type"`
@@ -59,16 +86,18 @@ type ActivationMilestones struct {
 }
 
 type State struct {
-	Tenants           map[string]string
-	Evidence          map[string][]EvidenceItem
-	EvidenceFile      map[string][]EvidenceFile
-	ReminderSent      map[string]struct{}
-	Proofpacks        map[string][]ProofpackMeta
-	AuditLogs         []AuditEntry
-	StripeEvents      map[string]struct{}
-	ReviewSnapshots   map[string][]ReviewSnapshot
-	OperationalEvents map[string][]OperationalEvent
-	Activation        map[string]ActivationMilestones
+	Tenants              map[string]string
+	Evidence             map[string][]EvidenceItem
+	EvidenceFile         map[string][]EvidenceFile
+	ReminderSent         map[string]struct{}
+	Proofpacks           map[string][]ProofpackMeta
+	AuditLogs            []AuditEntry
+	StripeEvents         map[string]struct{}
+	ReviewSnapshots      map[string][]ReviewSnapshot
+	OperationalEvents    map[string][]OperationalEvent
+	Activation           map[string]ActivationMilestones
+	OperationalSnapshots map[string][]OperationalSnapshot
+	ReviewReports        map[string][]ReviewReport
 }
 
 type Store interface {
@@ -86,7 +115,7 @@ func (m *MemoryStore) WithLock(fn func(*State) error) error {
 	return fn(&m.state)
 }
 func emptyState() State {
-	return State{Tenants: map[string]string{}, Evidence: map[string][]EvidenceItem{}, EvidenceFile: map[string][]EvidenceFile{}, ReminderSent: map[string]struct{}{}, Proofpacks: map[string][]ProofpackMeta{}, AuditLogs: []AuditEntry{}, StripeEvents: map[string]struct{}{}, ReviewSnapshots: map[string][]ReviewSnapshot{}, OperationalEvents: map[string][]OperationalEvent{}, Activation: map[string]ActivationMilestones{}}
+	return State{Tenants: map[string]string{}, Evidence: map[string][]EvidenceItem{}, EvidenceFile: map[string][]EvidenceFile{}, ReminderSent: map[string]struct{}{}, Proofpacks: map[string][]ProofpackMeta{}, AuditLogs: []AuditEntry{}, StripeEvents: map[string]struct{}{}, ReviewSnapshots: map[string][]ReviewSnapshot{}, OperationalEvents: map[string][]OperationalEvent{}, Activation: map[string]ActivationMilestones{}, OperationalSnapshots: map[string][]OperationalSnapshot{}, ReviewReports: map[string][]ReviewReport{}}
 }
 
 var ErrDataDirRequired = errors.New("DATA_DIR is required for file persistence mode")

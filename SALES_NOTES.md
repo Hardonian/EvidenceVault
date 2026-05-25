@@ -25,3 +25,6 @@
 - Use recurring review cadence + unresolved trend to identify friction and conversion readiness.
 - Ask pain discovery: What recurring operational fire keeps coming back weekly? Which owner handoffs fail today?
 - Ask upgrade readiness: Are multiple owners contributing weekly? Is proofpack history now critical to external trust?
+
+## Operational continuity memory
+EvidenceVault emphasizes deterministic operational memory, recurring reviews, and historical truth without AI or analytics theatre.

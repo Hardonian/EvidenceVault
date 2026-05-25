@@ -2,7 +2,9 @@ package operations
 
 import (
 	"context"
+	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +23,20 @@ type Activity struct {
 	CreatedAt               time.Time
 }
 
+type TrendWindow struct {
+	WindowDays  int
+	StartHealth int
+	EndHealth   int
+	HealthDelta int
+	Status      string
+}
+
+type UsageSignals struct {
+	Cadence            string
+	ProofpackFrequency string
+	RecoveryTrend      string
+}
+
 type Summary struct {
 	HealthScore, Expired, ExpiringSoon, MissingOwner, StaleEvidence, Unresolved int
 	PreviousHealthScore, HealthDelta, UnresolvedDelta                           int
@@ -36,6 +52,9 @@ type Summary struct {
 	DaysSinceLastUpload, DaysSinceLastProofpack                                 int
 	Friction                                                                    []string
 	UpgradeSignals                                                              []string
+	Trend7, Trend30                                                             TrendWindow
+	Usage                                                                       UsageSignals
+	FounderSignals                                                              []string
 }
 type MilestoneState struct {
 	Key, Label string
@@ -103,6 +122,9 @@ func (s *Service) BuildSummary(ctx context.Context, tenantID string, items []evi
 	sum.PilotMaturityStage = deriveStage(sum, len(items))
 	sum.Friction = frictionIndicators(sum, now)
 	sum.UpgradeSignals = upgradeSignals(sum, len(items))
+	sum.Trend7, sum.Trend30 = s.buildTrends(tenantID, sum.HealthScore)
+	sum.Usage = usageSignals(sum, len(sum.ProofpackHistory))
+	sum.FounderSignals = founderSignals(sum)
 	if !sum.LastReviewedAt.IsZero() {
 		sum.DaysSinceLastReview = int(now.Sub(sum.LastReviewedAt).Hours() / 24)
 	}
@@ -238,6 +260,101 @@ func evaluate(items []evidence.Item, now time.Time) Summary {
 	sort.Slice(s.Owners, func(i, j int) bool { return s.Owners[i].Unresolved > s.Owners[j].Unresolved })
 	return s
 }
+
+func trendStatus(delta int) string {
+	if delta > 2 {
+		return "improving"
+	}
+	if delta < -2 {
+		return "degrading"
+	}
+	return "stable"
+}
+
+func (s *Service) buildTrends(tenantID string, currentHealth int) (TrendWindow, TrendWindow) {
+	var snaps []persistence.OperationalSnapshot
+	_ = s.store.WithLock(func(st *persistence.State) error {
+		snaps = append(snaps, st.OperationalSnapshots[tenantID]...)
+		return nil
+	})
+	build := func(days int) TrendWindow {
+		w := TrendWindow{WindowDays: days, EndHealth: currentHealth, StartHealth: currentHealth}
+		cut := time.Now().UTC().AddDate(0, 0, -days)
+		for i := len(snaps) - 1; i >= 0; i-- {
+			if snaps[i].CreatedAt.After(cut) {
+				w.StartHealth = snaps[i].HealthScore
+			}
+		}
+		w.HealthDelta = w.EndHealth - w.StartHealth
+		w.Status = trendStatus(w.HealthDelta)
+		return w
+	}
+	return build(7), build(30)
+}
+
+func usageSignals(sum Summary, proofpacks int) UsageSignals {
+	out := UsageSignals{Cadence: "stalled operational cadence", ProofpackFrequency: "infrequent", RecoveryTrend: "slowing"}
+	if sum.ReviewCompletionStreak >= 2 {
+		out.Cadence = "improving discipline"
+	}
+	if proofpacks >= 3 {
+		out.ProofpackFrequency = "consistent"
+	}
+	if sum.UnresolvedDelta <= 0 {
+		out.RecoveryTrend = "recovery improving"
+	}
+	return out
+}
+
+func founderSignals(sum Summary) []string {
+	var out []string
+	if sum.Trend30.HealthDelta < 0 {
+		out = append(out, "pilot retention risk: health trend declined over 30 days")
+	}
+	if sum.DaysSinceLastReview > 9 {
+		out = append(out, "cadence degradation warning")
+	}
+	if sum.UnresolvedDelta > 0 {
+		out = append(out, "unresolved recovery trend worsening")
+	}
+	return out
+}
+
+func (s *Service) GenerateOperationalSnapshot(ctx context.Context, tenantID string) (persistence.OperationalSnapshot, error) {
+	sum, _ := s.BuildSummary(ctx, tenantID, nil)
+	now := time.Now().UTC()
+	snap := persistence.OperationalSnapshot{TenantID: tenantID, Date: now.Format("2006-01-02"), CreatedAt: now, UnresolvedCount: sum.Unresolved, ExpiredEvidenceCount: sum.Expired, OwnerlessEvidenceCount: sum.MissingOwner, StaleEvidenceCount: sum.StaleEvidence, HealthScore: sum.HealthScore, ProofpackCount: len(sum.ProofpackHistory), ReviewStreak: sum.ReviewCompletionStreak, ActivationPercent: sum.ActivationCompletionPercent, MaturityStage: sum.PilotMaturityStage, TotalEvidenceCount: sum.Unresolved + (sum.HealthScore / 100), OwnersCount: len(sum.Owners)}
+	_ = s.store.WithLock(func(st *persistence.State) error {
+		arr := st.OperationalSnapshots[tenantID]
+		if len(arr) > 0 && arr[0].Date == snap.Date {
+			st.OperationalSnapshots[tenantID][0] = snap
+			return nil
+		}
+		arr = append([]persistence.OperationalSnapshot{snap}, arr...)
+		if len(arr) > 90 {
+			arr = arr[:90]
+		}
+		st.OperationalSnapshots[tenantID] = arr
+		return nil
+	})
+	s.RecordEvent(tenantID, "trend.snapshot.generated", "Operational trend snapshot generated", "")
+	return snap, nil
+}
+
+func (s *Service) GenerateReviewReport(ctx context.Context, tenantID string) (persistence.ReviewReport, error) {
+	sum, _ := s.BuildSummary(ctx, tenantID, nil)
+	now := time.Now().UTC()
+	md := fmt.Sprintf("# Operational Review\n\n- Health score: %d\n- Unresolved: %d (delta %d)\n- Stale evidence: %d\n- Missing owners: %d\n- Proofpack activity: %d\n- Activation: %d%%\n- Maturity stage: %s\n", sum.HealthScore, sum.Unresolved, sum.UnresolvedDelta, sum.StaleEvidence, sum.MissingOwner, len(sum.ProofpackHistory), sum.ActivationCompletionPercent, sum.PilotMaturityStage)
+	rep := persistence.ReviewReport{TenantID: tenantID, ID: now.Format("20060102T150405"), GeneratedAt: now, Summary: "Deterministic operational review report", Markdown: md, PlainText: strings.ReplaceAll(md, "- ", "* "), HTML: "<pre>" + md + "</pre>"}
+	_ = s.store.WithLock(func(st *persistence.State) error {
+		st.ReviewReports[tenantID] = append([]persistence.ReviewReport{rep}, st.ReviewReports[tenantID]...)
+		return nil
+	})
+	s.RecordEvent(tenantID, "review.report.generated", "Operational review report generated", rep.ID)
+	return rep, nil
+}
+
+func itoa(n int) string { return strconv.Itoa(n) }
 
 func (s *Service) GenerateReviewSnapshot(ctx context.Context, tenantID string) (persistence.ReviewSnapshot, error) {
 	sum, _ := s.BuildSummary(ctx, tenantID, nil)
