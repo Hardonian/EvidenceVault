@@ -36,3 +36,11 @@ EvidenceVault is a compliance-operations utility. It helps teams track evidence,
 4. Run reminders (`POST /api/cron/reminders`).
 5. Generate proofpack (`POST /app/proofpacks`).
 6. Open `/app` for operational state.
+
+## Persistence Modes
+- Default build remains zero-dependency and uses `PERSISTENCE_MODE=memory` (ephemeral/degraded).
+- Pilot durable mode: `PERSISTENCE_MODE=file` with `DATA_DIR` writable; single-instance only.
+- Production fail-closed: memory mode in production requires `ALLOW_EPHEMERAL_PRODUCTION=true`.
+- Cloud Run caveat: file mode requires a writable mounted volume/path.
+- Postgres adapter is roadmap hardening, not active default.
+- Verify: `go mod tidy && test -z "$(gofmt -l .)" && go vet ./... && go test ./... && go build ./cmd/server && make smoke`.

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"evidencevault/internal/audit"
+	"evidencevault/internal/persistence"
 )
 
 func TestWebhookVerifyAndIdempotency(t *testing.T) {
@@ -21,7 +22,8 @@ func TestWebhookVerifyAndIdempotency(t *testing.T) {
 	sig := hex.EncodeToString(mac.Sum(nil))
 	req := httptest.NewRequest("POST", "/webhooks/stripe", strings.NewReader(payload))
 	req.Header.Set("Stripe-Signature", "t="+ts+",v1="+sig)
-	s := &Service{WebhookSecret: secret, Audit: audit.NewService()}
+	store := persistence.NewMemoryStore()
+	s := &Service{WebhookSecret: secret, Audit: audit.NewService(store), Store: store}
 	e, b, err := s.VerifyWebhook(req)
 	if err != nil || e.ID != "evt_1" || len(b) == 0 {
 		t.Fatal("verify failed")
