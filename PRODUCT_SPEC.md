@@ -45,3 +45,7 @@ EvidenceVault is a compliance-operations utility. It helps teams track evidence,
 - Postgres adapter is roadmap hardening, not active default.
 - Verify: `go mod tidy && test -z "$(gofmt -l .)" && go vet ./... && go test ./... && go build ./cmd/server && make smoke`.
 \n## Pilot truth update\n- Zero external Go dependencies.\n- Persistence modes: memory (degraded) and file (pilot durable).\n- No compliance certification or legal advice.\n- No AI claims.\n- Production fail-closed if persistence is memory unless explicitly overridden.\n
+
+## Operational cadence update
+EvidenceVault now includes weekly operational reviews, deterministic health scoring, ownership-based unresolved queues, review snapshot export JSON, and operational history to create recurring operational continuity.
+See `OPERATING_CADENCE.md` for the weekly/monthly/quarterly loop and current manual limitations.

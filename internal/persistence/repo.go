@@ -22,22 +22,45 @@ type AuditEntry struct {
 	CreatedAt                                                time.Time
 }
 
-type State struct {
-	Tenants      map[string]string
-	Evidence     map[string][]EvidenceItem
-	EvidenceFile map[string][]EvidenceFile
-	ReminderSent map[string]struct{}
-	Proofpacks   map[string][]ProofpackMeta
-	AuditLogs    []AuditEntry
-	StripeEvents map[string]struct{}
-}
-
-// rest
-
 type ProofpackMeta struct {
-	ID        string
-	CreatedAt time.Time
+	ID        string    `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
 }
+
+type ReviewSnapshot struct {
+	TenantID              string    `json:"tenant_id"`
+	GeneratedAt           time.Time `json:"generated_at"`
+	LastReviewedAt        time.Time `json:"last_reviewed_at"`
+	NextRecommendedReview time.Time `json:"next_recommended_review"`
+	HealthScore           int       `json:"health_score"`
+	UnresolvedIssues      int       `json:"unresolved_issues"`
+	ExpiredEvidence       int       `json:"expired_evidence"`
+	ExpiringEvidence      int       `json:"expiring_evidence"`
+	StaleEvidence         int       `json:"stale_evidence"`
+	MissingOwners         int       `json:"missing_owners"`
+	Disclaimer            string    `json:"disclaimer"`
+}
+
+type OperationalEvent struct {
+	TenantID  string    `json:"tenant_id"`
+	Type      string    `json:"type"`
+	Message   string    `json:"message"`
+	EntityID  string    `json:"entity_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type State struct {
+	Tenants           map[string]string
+	Evidence          map[string][]EvidenceItem
+	EvidenceFile      map[string][]EvidenceFile
+	ReminderSent      map[string]struct{}
+	Proofpacks        map[string][]ProofpackMeta
+	AuditLogs         []AuditEntry
+	StripeEvents      map[string]struct{}
+	ReviewSnapshots   map[string][]ReviewSnapshot
+	OperationalEvents map[string][]OperationalEvent
+}
+
 type Store interface {
 	WithLock(func(*State) error) error
 }
@@ -53,7 +76,7 @@ func (m *MemoryStore) WithLock(fn func(*State) error) error {
 	return fn(&m.state)
 }
 func emptyState() State {
-	return State{Tenants: map[string]string{}, Evidence: map[string][]EvidenceItem{}, EvidenceFile: map[string][]EvidenceFile{}, ReminderSent: map[string]struct{}{}, Proofpacks: map[string][]ProofpackMeta{}, AuditLogs: []AuditEntry{}, StripeEvents: map[string]struct{}{}}
+	return State{Tenants: map[string]string{}, Evidence: map[string][]EvidenceItem{}, EvidenceFile: map[string][]EvidenceFile{}, ReminderSent: map[string]struct{}{}, Proofpacks: map[string][]ProofpackMeta{}, AuditLogs: []AuditEntry{}, StripeEvents: map[string]struct{}{}, ReviewSnapshots: map[string][]ReviewSnapshot{}, OperationalEvents: map[string][]OperationalEvent{}}
 }
 
 var ErrDataDirRequired = errors.New("DATA_DIR is required for file persistence mode")
