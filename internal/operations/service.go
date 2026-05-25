@@ -41,8 +41,10 @@ func NewService(store persistence.Store, ev *evidence.Service) *Service {
 	return &Service{store: store, evidence: ev}
 }
 
-func (s *Service) BuildSummary(ctx context.Context, tenantID string) (Summary, error) {
-	items, _ := s.evidence.List(ctx, tenantID)
+func (s *Service) BuildSummary(ctx context.Context, tenantID string, items []evidence.Item) (Summary, error) {
+	if items == nil {
+		items, _ = s.evidence.List(ctx, tenantID)
+	}
 	now := time.Now().UTC()
 	sum := evaluate(items, now)
 	sum.NextRecommendedReview = now.AddDate(0, 0, 7)
@@ -148,7 +150,7 @@ func evaluate(items []evidence.Item, now time.Time) Summary {
 }
 
 func (s *Service) GenerateReviewSnapshot(ctx context.Context, tenantID string) (persistence.ReviewSnapshot, error) {
-	sum, _ := s.BuildSummary(ctx, tenantID)
+	sum, _ := s.BuildSummary(ctx, tenantID, nil)
 	now := time.Now().UTC()
 	snap := persistence.ReviewSnapshot{TenantID: tenantID, GeneratedAt: now, LastReviewedAt: now, NextRecommendedReview: now.AddDate(0, 0, 7), HealthScore: sum.HealthScore, UnresolvedIssues: sum.Unresolved, ExpiredEvidence: sum.Expired, ExpiringEvidence: sum.ExpiringSoon, StaleEvidence: sum.StaleEvidence, MissingOwners: sum.MissingOwner, Disclaimer: disclaimer}
 	_ = s.store.WithLock(func(st *persistence.State) error {

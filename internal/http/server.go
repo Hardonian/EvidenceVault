@@ -116,7 +116,7 @@ func (s Server) app(w http.ResponseWriter, r *http.Request) {
 	packs, _ := s.Proofpack.List(r.Context(), c.TenantID)
 	sum := operations.Summary{}
 	if s.Operations != nil {
-		sum, _ = s.Operations.BuildSummary(r.Context(), c.TenantID)
+		sum, _ = s.Operations.BuildSummary(r.Context(), c.TenantID, items)
 	}
 	_ = s.Templates.ExecuteTemplate(w, "app.html", map[string]any{"Tenant": c.TenantID, "Items": items, "Proofpacks": packs, "Dashboard": buildDashboardViewModel(items, packs, s.FreeTierLimit, s.PersistenceMode, s.DegradedMode, sum)})
 }
