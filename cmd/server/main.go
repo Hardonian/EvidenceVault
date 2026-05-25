@@ -46,10 +46,11 @@ func main() {
 	ev := evidence.NewService(store, cfg.FreeTierLimit)
 	opsSvc := operations.NewService(store, ev)
 	billingSvc := &billing.Service{PriceID: cfg.StripePriceID, BaseURL: cfg.BaseURL, WebhookSecret: cfg.StripeWebhookSecret, SecretKey: cfg.StripeSecretKey, Audit: auditSvc, Store: store}
-	if err := demo.Seed(ctx, cfg.AppEnv, cfg.DemoSeed, ev, "pilot-demo"); err != nil {
+	ppSvc := proofpack.NewService(store, auditSvc, ev)
+	if err := demo.Seed(ctx, cfg.AppEnv, cfg.DemoMode, ev, opsSvc, ppSvc, "pilot-demo"); err != nil {
 		log.Fatal(err)
 	}
-	srv := &http.Server{Addr: cfg.Addr, Handler: httpserver.Server{Version: cfg.Version, Evidence: ev, Proofpack: proofpack.NewService(store, auditSvc, ev), Reminders: reminders.NewService(store, email.LogSender{}, auditSvc, ev), Storage: storage.LocalClient{BasePath: "uploads"}, Billing: billingSvc, Templates: tmpl, CronSecret: cfg.CronSecret, FreeTierLimit: cfg.FreeTierLimit, PersistenceMode: cfg.PersistenceMode, DegradedMode: cfg.DegradedMode, Operations: opsSvc}.Routes()}
+	srv := &http.Server{Addr: cfg.Addr, Handler: httpserver.Server{Version: cfg.Version, Evidence: ev, Proofpack: ppSvc, Reminders: reminders.NewService(store, email.LogSender{}, auditSvc, ev), Storage: storage.LocalClient{BasePath: "uploads"}, Billing: billingSvc, Templates: tmpl, CronSecret: cfg.CronSecret, FreeTierLimit: cfg.FreeTierLimit, PersistenceMode: cfg.PersistenceMode, DegradedMode: cfg.DegradedMode, Operations: opsSvc}.Routes()}
 	go func() {
 		log.Printf("listening on %s", cfg.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

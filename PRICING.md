@@ -1,4 +1,4 @@
-# Pricing Hypothesis
-- Free pilot: up to 10 evidence records.
-- Starter pilot paid: increased record limits + support SLA.
-- Expansion: tenant-level volume pricing after pilot validation.
+# Pricing Guidance
+- Free pilot: up to configured free evidence limit.
+- Paid pilot: higher limits + support SLA, still simple operational model.
+- Positioning: replace spreadsheet tracking with recurring operational accountability.

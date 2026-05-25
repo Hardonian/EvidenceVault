@@ -2,26 +2,39 @@ package httpserver
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"evidencevault/internal/evidence"
 	"evidencevault/internal/operations"
 )
 
+type PriorityItem struct {
+	Label string
+	Count int
+}
+type TemplateCard struct{ Key, Name, Description string }
+
 type DashboardViewModel struct {
 	TotalEvidence, ExpiringSoon, Expired, MissingOwner, TotalProofpacks int
 	LatestProofpackTime, Plan, FreeTierUsage, PersistenceMode           string
 	DegradedWarnings                                                    []string
 	HealthScore, UnresolvedIssues, StaleEvidence                        int
-	LastReviewedAt, NextRecommendedReview                               string
+	PreviousHealthScore, HealthDelta, UnresolvedDelta                   int
+	ReviewCompletionStreak, DaysSinceLastReview                         int
+	LastReviewedAt, NextRecommendedReview, LastActivityAt               string
 	OwnerSummaries                                                      []operations.OwnerSummary
 	RecentActivity                                                      []operations.Activity
 	Cadence                                                             []string
+	Onboarding                                                          bool
+	StarterTemplates                                                    []TemplateCard
+	PriorityQueue                                                       []PriorityItem
 }
 
 func buildDashboardViewModel(items []evidence.Item, proofpacks []map[string]any, freeTierLimit int, persistenceMode string, degradedMode bool, summary operations.Summary) DashboardViewModel {
 	vm := DashboardViewModel{TotalEvidence: len(items), TotalProofpacks: len(proofpacks), Plan: "free", FreeTierUsage: usageText(len(items), freeTierLimit), PersistenceMode: persistenceMode,
-		HealthScore: summary.HealthScore, UnresolvedIssues: summary.Unresolved, StaleEvidence: summary.StaleEvidence, OwnerSummaries: summary.Owners, RecentActivity: summary.RecentActivity, Cadence: summary.Cadence}
+		HealthScore: summary.HealthScore, UnresolvedIssues: summary.Unresolved, StaleEvidence: summary.StaleEvidence, OwnerSummaries: summary.Owners, RecentActivity: summary.RecentActivity, Cadence: summary.Cadence,
+		PreviousHealthScore: summary.PreviousHealthScore, HealthDelta: summary.HealthDelta, UnresolvedDelta: summary.UnresolvedDelta, ReviewCompletionStreak: summary.ReviewCompletionStreak, DaysSinceLastReview: summary.DaysSinceLastReview}
 	var latest time.Time
 	for _, it := range items {
 		if it.Status == "expiring" {
@@ -50,12 +63,23 @@ func buildDashboardViewModel(items []evidence.Item, proofpacks []map[string]any,
 		vm.LastReviewedAt = summary.LastReviewedAt.Format(time.RFC3339)
 	}
 	vm.NextRecommendedReview = summary.NextRecommendedReview.Format(time.RFC3339)
+	if summary.LastActivityAt.IsZero() {
+		vm.LastActivityAt = "no activity yet"
+	} else {
+		vm.LastActivityAt = summary.LastActivityAt.Format(time.RFC3339)
+	}
 	if degradedMode {
 		vm.DegradedWarnings = append(vm.DegradedWarnings, "Running in memory mode: data is ephemeral and resets on restart.")
 	}
 	if persistenceMode == "file" {
 		vm.DegradedWarnings = append(vm.DegradedWarnings, "File mode is durable for pilot use but is single-node storage.")
 	}
+	vm.Onboarding = len(items) == 0
+	for _, t := range evidence.StarterTemplates(time.Now().UTC()) {
+		vm.StarterTemplates = append(vm.StarterTemplates, TemplateCard{Key: t.Key, Name: t.Name, Description: t.Description})
+	}
+	vm.PriorityQueue = []PriorityItem{{"Expired evidence", vm.Expired}, {"Missing owners", vm.MissingOwner}, {"Expiring soon", vm.ExpiringSoon}, {"Stale evidence", vm.StaleEvidence}, {"Recent uploads/proofpacks", len(vm.RecentActivity) + vm.TotalProofpacks}}
+	sort.SliceStable(vm.PriorityQueue, func(i, j int) bool { return i < j })
 	return vm
 }
 

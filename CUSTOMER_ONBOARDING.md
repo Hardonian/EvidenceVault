@@ -1,10 +1,11 @@
-# 30-Minute Customer Onboarding
-1. 5 min: explain value and limits.
-2. 10 min: add first evidence records.
-3. 5 min: upload files.
-4. 5 min: generate proofpack.
-5. 5 min: set weekly operational cadence.
-
-## Operational cadence update
-EvidenceVault now includes weekly operational reviews, deterministic health scoring, ownership-based unresolved queues, review snapshot export JSON, and operational history to create recurring operational continuity.
-See `OPERATING_CADENCE.md` for the weekly/monthly/quarterly loop and current manual limitations.
+# Customer Onboarding
+Day 1:
+- Use first-run guide.
+- Create first 3 records from templates.
+- Assign owners and reminders.
+Week 1:
+- Run first review snapshot.
+- Fix expired/missing-owner items.
+Week 2+:
+- Weekly review cadence.
+- Monthly proofpack export.
