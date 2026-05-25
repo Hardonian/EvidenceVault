@@ -1,20 +1,43 @@
 <!doctype html>
-<html><body>
+<html lang="en">
+<body style="font-family: sans-serif; max-width: 1100px; margin: 1.5rem auto; line-height: 1.4;">
 <h1>EvidenceVault App</h1>
 <p>Tenant: {{.Tenant}}</p>
-<h2>Create Evidence</h2>
-<form method="post" action="/app/evidence">
-<textarea name="json" rows="4" cols="80">{"title":"Policy","category":"Compliance","status":"active","reminder_days_before":30}</textarea>
-</form>
+{{if .Dashboard.DegradedWarnings}}
+<div style="padding: 0.75rem; border: 1px solid #a66; background: #fff3f3;">
+<strong>Degraded / mode notice:</strong>
+<ul>{{range .Dashboard.DegradedWarnings}}<li>{{.}}</li>{{end}}</ul>
+</div>
+{{end}}
+<h2>Start here</h2>
+<ol>
+<li>Create evidence with title, category, owner, and expiry date.</li>
+<li>Copy the created evidence ID from API response, then upload supporting file using that ID.</li>
+<li>Generate a proofpack and keep it with your renewal process.</li>
+</ol>
+<h2>Plan usage</h2>
+<ul>
+<li>Plan: {{.Dashboard.Plan}}</li>
+<li>Usage: {{.Dashboard.FreeTierUsage}}</li>
+<li>Persistence mode: {{.Dashboard.PersistenceMode}}</li>
+</ul>
+<h2>Dashboard</h2>
+<ul>
+<li>Total evidence: {{.Dashboard.TotalEvidence}}</li><li>Expiring soon: {{.Dashboard.ExpiringSoon}}</li><li>Expired: {{.Dashboard.Expired}}</li><li>Missing owner: {{.Dashboard.MissingOwner}}</li><li>Total proofpacks: {{.Dashboard.TotalProofpacks}}</li><li>Latest proofpack: {{.Dashboard.LatestProofpackTime}}</li>
+</ul>
+<h2>Create Evidence (JSON via API)</h2>
+<p>POST <code>/app/evidence</code> with X-Tenant-ID and X-User-ID headers. Use statuses: active, expiring, expired, missing, archived.</p>
 <h2>Evidence</h2>
-<table border="1"><tr><th>Title</th><th>Status</th><th>Owner</th><th>File</th></tr>
-{{range .Items}}<tr><td>{{.Title}}</td><td>{{.Status}}</td><td>{{.OwnerEmail}}</td><td>{{.SourceFilePath}}</td></tr>{{else}}<tr><td colspan="4">No evidence yet.</td></tr>{{end}}
+<table border="1"><tr><th>Title</th><th>Category</th><th>Status</th><th>Owner</th><th>File</th></tr>
+{{range .Items}}<tr><td>{{.Title}}</td><td>{{.Category}}</td><td>{{.Status}}</td><td>{{.OwnerEmail}}</td><td>{{.SourceFilePath}}</td></tr>{{else}}<tr><td colspan="5">No evidence yet.</td></tr>{{end}}
 </table>
 <h2>Upload Evidence File</h2>
+<p>Requires a valid <code>evidence_id</code> from created evidence.</p>
 <form method="post" action="/app/evidence/upload" enctype="multipart/form-data">
-<input name="evidence_id" placeholder="evidence id" /> <input type="file" name="file" /> <button>Upload</button>
+<input name="evidence_id" placeholder="evidence id" required/> <input type="file" name="file" required/> <button>Upload</button>
 </form>
 <h2>Proofpacks</h2>
+<p>Proofpack exports your evidence list, linked files metadata, and audit summary.</p>
 <form method="post" action="/app/proofpacks"><button>Generate Proofpack</button></form>
 <ul>{{range .Proofpacks}}<li>{{.id}} - {{.created_at}}</li>{{else}}<li>No proofpacks yet.</li>{{end}}</ul>
 </body></html>
