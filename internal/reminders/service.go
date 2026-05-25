@@ -24,25 +24,33 @@ func (s *Service) Run(ctx context.Context) (int, error) {
 	items := s.evidence.All()
 	sent := 0
 	today := time.Now().UTC().Format("2006-01-02")
+	toProcess := make([]evidence.Item, 0, len(items))
+	nowUTC := time.Now().UTC()
 	for _, it := range items {
 		if it.OwnerEmail == "" || it.ExpiryDate == nil {
 			continue
 		}
-		if it.ExpiryDate.UTC().Before(time.Now().UTC()) || it.ExpiryDate.UTC().After(time.Now().UTC().AddDate(0, 0, it.ReminderDaysBefore)) {
+		if it.ExpiryDate.UTC().Before(nowUTC) || it.ExpiryDate.UTC().After(nowUTC.AddDate(0, 0, it.ReminderDaysBefore)) {
 			continue
 		}
-		k := it.ID + ":" + today
-		dup := false
+		toProcess = append(toProcess, it)
+	}
+
+	toSend := make([]evidence.Item, 0, len(toProcess))
+	if len(toProcess) > 0 {
 		_ = s.store.WithLock(func(st *persistence.State) error {
-			_, dup = st.ReminderSent[k]
-			if !dup {
-				st.ReminderSent[k] = struct{}{}
+			for _, it := range toProcess {
+				k := it.ID + ":" + today
+				if _, dup := st.ReminderSent[k]; !dup {
+					st.ReminderSent[k] = struct{}{}
+					toSend = append(toSend, it)
+				}
 			}
 			return nil
 		})
-		if dup {
-			continue
-		}
+	}
+
+	for _, it := range toSend {
 		status := "sent"
 		if err := s.email.Send(it.OwnerEmail, "Evidence reminder: "+it.Title, "This evidence is expiring soon."); err != nil {
 			status = "failed"
