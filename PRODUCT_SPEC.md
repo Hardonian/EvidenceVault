@@ -44,3 +44,4 @@ EvidenceVault is a compliance-operations utility. It helps teams track evidence,
 - Cloud Run caveat: file mode requires a writable mounted volume/path.
 - Postgres adapter is roadmap hardening, not active default.
 - Verify: `go mod tidy && test -z "$(gofmt -l .)" && go vet ./... && go test ./... && go build ./cmd/server && make smoke`.
+\n## Pilot truth update\n- Zero external Go dependencies.\n- Persistence modes: memory (degraded) and file (pilot durable).\n- No compliance certification or legal advice.\n- No AI claims.\n- Production fail-closed if persistence is memory unless explicitly overridden.\n

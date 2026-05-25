@@ -16,14 +16,17 @@ import (
 )
 
 type Server struct {
-	Version    string
-	Evidence   *evidence.Service
-	Proofpack  *proofpack.Service
-	Reminders  *reminders.Service
-	Storage    storage.Client
-	Billing    *billing.Service
-	Templates  *template.Template
-	CronSecret string
+	Version         string
+	Evidence        *evidence.Service
+	Proofpack       *proofpack.Service
+	Reminders       *reminders.Service
+	Storage         storage.Client
+	Billing         *billing.Service
+	Templates       *template.Template
+	CronSecret      string
+	FreeTierLimit   int
+	PersistenceMode string
+	DegradedMode    bool
 }
 
 func method(m string, h http.HandlerFunc) http.HandlerFunc {
@@ -90,7 +93,7 @@ func (s Server) app(w http.ResponseWriter, r *http.Request) {
 	}
 	items, _ := s.Evidence.List(r.Context(), c.TenantID)
 	packs, _ := s.Proofpack.List(r.Context(), c.TenantID)
-	_ = s.Templates.ExecuteTemplate(w, "app.html", map[string]any{"Tenant": c.TenantID, "Items": items, "Proofpacks": packs})
+	_ = s.Templates.ExecuteTemplate(w, "app.html", map[string]any{"Tenant": c.TenantID, "Items": items, "Proofpacks": packs, "Dashboard": buildDashboardViewModel(items, packs, s.FreeTierLimit, s.PersistenceMode, s.DegradedMode)})
 }
 func (s Server) listEvidence(w http.ResponseWriter, r *http.Request) {
 	c, ok := s.authContext(w, r)

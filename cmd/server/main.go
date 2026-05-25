@@ -13,6 +13,7 @@ import (
 	"evidencevault/internal/audit"
 	"evidencevault/internal/billing"
 	"evidencevault/internal/config"
+	"evidencevault/internal/demo"
 	"evidencevault/internal/email"
 	"evidencevault/internal/evidence"
 	httpserver "evidencevault/internal/http"
@@ -43,7 +44,10 @@ func main() {
 	auditSvc := audit.NewService(store)
 	ev := evidence.NewService(store, cfg.FreeTierLimit)
 	billingSvc := &billing.Service{PriceID: cfg.StripePriceID, BaseURL: cfg.BaseURL, WebhookSecret: cfg.StripeWebhookSecret, SecretKey: cfg.StripeSecretKey, Audit: auditSvc, Store: store}
-	srv := &http.Server{Addr: cfg.Addr, Handler: httpserver.Server{Version: cfg.Version, Evidence: ev, Proofpack: proofpack.NewService(store, auditSvc, ev), Reminders: reminders.NewService(store, email.LogSender{}, auditSvc, ev), Storage: storage.LocalClient{BasePath: "uploads"}, Billing: billingSvc, Templates: tmpl, CronSecret: cfg.CronSecret}.Routes()}
+	if err := demo.Seed(ctx, cfg.AppEnv, cfg.DemoSeed, ev, "pilot-demo"); err != nil {
+		log.Fatal(err)
+	}
+	srv := &http.Server{Addr: cfg.Addr, Handler: httpserver.Server{Version: cfg.Version, Evidence: ev, Proofpack: proofpack.NewService(store, auditSvc, ev), Reminders: reminders.NewService(store, email.LogSender{}, auditSvc, ev), Storage: storage.LocalClient{BasePath: "uploads"}, Billing: billingSvc, Templates: tmpl, CronSecret: cfg.CronSecret, FreeTierLimit: cfg.FreeTierLimit, PersistenceMode: cfg.PersistenceMode, DegradedMode: cfg.DegradedMode}.Routes()}
 	go func() {
 		log.Printf("listening on %s", cfg.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
