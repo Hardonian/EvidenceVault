@@ -36,7 +36,7 @@ func main() {
 	}
 	defer database.Pool.Close()
 	tmpl := template.Must(template.ParseGlob("templates/*.html"))
-	srv := &http.Server{Addr: cfg.Addr, Handler: httpserver.Server{Version: cfg.Version, Evidence: evidence.NewService(database.Pool, cfg.FreeTierLimit), Proofpack: proofpack.NewService(database.Pool), Reminders: reminders.NewService(database.Pool), Storage: storage.LocalClient{BasePath: "uploads"}, Billing: billing.Service{PriceID: cfg.StripePriceID, BaseURL: cfg.BaseURL, WebhookSecret: cfg.StripeWebhookSecret}, Templates: tmpl, CronSecret: cfg.CronSecret}.Routes()}
+	srv := &http.Server{Addr: cfg.Addr, Handler: httpserver.Server{Version: cfg.Version, Evidence: evidence.NewService(database.Pool, cfg.FreeTierLimit), Proofpack: proofpack.NewService(database.Pool), Reminders: reminders.NewService(database.Pool), Storage: storage.LocalClient{BasePath: "uploads"}, Billing: &billing.Service{PriceID: cfg.StripePriceID, BaseURL: cfg.BaseURL, WebhookSecret: cfg.StripeWebhookSecret, DB: database.Pool}, Templates: tmpl, CronSecret: cfg.CronSecret}.Routes()}
 	go func() {
 		log.Printf("listening on %s", cfg.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

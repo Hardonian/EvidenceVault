@@ -1,5 +1,11 @@
 # Security
-- Fail closed on CRON endpoint via `CRON_SECRET` bearer token.
-- Tenant isolation by mandatory `tenant_id` query scope in data access.
-- Stripe webhook signature verification and event-id idempotency table.
-- Do not log secrets or full cardholder data.
+
+- Development mode (`APP_ENV=development`) allows header-based tenant/user auth for local testing only.
+- Production requires either:
+  - signed session cookie (`SESSION_SECRET`), or
+  - API key mapped through `API_KEYS` (`key:tenant_id,key2:tenant2`).
+- Tenant scope is enforced in service queries by `tenant_id` filters.
+- Stripe webhooks are signature-verified and idempotent (`stripe_events`).
+
+Limitations:
+- No RBAC yet beyond tenant scoping and auth boundary.
