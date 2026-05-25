@@ -10,6 +10,7 @@ type Config struct {
 	AppEnv              string
 	Addr                string
 	DatabaseURL         string
+	DegradedMode        bool
 	S3Endpoint          string
 	S3Bucket            string
 	S3AccessKeyID       string
@@ -40,9 +41,7 @@ func Load() (Config, error) {
 		Version:             getenv("VERSION", "dev"),
 		FreeTierLimit:       getenvInt("FREE_TIER_LIMIT", 10),
 	}
-	if cfg.DatabaseURL == "" {
-		return cfg, fmt.Errorf("DATABASE_URL is required")
-	}
+	cfg.DegradedMode = cfg.DatabaseURL == ""
 	if cfg.CronSecret == "" {
 		return cfg, fmt.Errorf("CRON_SECRET is required")
 	}

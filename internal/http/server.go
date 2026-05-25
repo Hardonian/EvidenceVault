@@ -5,7 +5,6 @@ import (
 	"errors"
 	"html/template"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"evidencevault/internal/auth"
@@ -14,7 +13,6 @@ import (
 	"evidencevault/internal/proofpack"
 	"evidencevault/internal/reminders"
 	"evidencevault/internal/storage"
-	"github.com/go-chi/chi/v5"
 )
 
 type Server struct {
@@ -28,24 +26,51 @@ type Server struct {
 	CronSecret string
 }
 
+func method(m string, h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != m {
+			w.Header().Set("Allow", m)
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		h(w, r)
+	}
+}
 func (s Server) Routes() http.Handler {
-	r := chi.NewRouter()
-	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200); _, _ = w.Write([]byte("ok")) })
-	r.Get("/readyz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200); _, _ = w.Write([]byte("ready")) })
-	r.Get("/version", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(s.Version)) })
-	r.Get("/", s.landing)
-	r.Get("/app", s.app)
-	r.Get("/app/evidence", s.listEvidence)
-	r.Post("/app/evidence", s.createEvidence)
-	r.Put("/app/evidence/{id}", s.updateEvidence)
-	r.Post("/app/evidence/upload", s.uploadEvidence)
-	r.Get("/app/proofpacks", s.listProofpacks)
-	r.Post("/app/proofpacks", s.createProofpack)
-	r.Post("/api/cron/reminders", s.runReminders)
-	r.Post("/billing/checkout", s.checkout)
-	r.Post("/billing/portal", s.portal)
-	r.Post("/webhooks/stripe", s.webhook)
-	return r
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", method(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200); _, _ = w.Write([]byte("ok")) }))
+	mux.HandleFunc("/readyz", method(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200); _, _ = w.Write([]byte("ready")) }))
+	mux.HandleFunc("/version", method(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(s.Version)) }))
+	mux.HandleFunc("/", method(http.MethodGet, s.landing))
+	mux.HandleFunc("/app", method(http.MethodGet, s.app))
+	mux.HandleFunc("/app/evidence", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			s.listEvidence(w, r)
+			return
+		}
+		if r.Method == http.MethodPost {
+			s.createEvidence(w, r)
+			return
+		}
+		http.Error(w, "method not allowed", 405)
+	})
+	mux.HandleFunc("/app/evidence/upload", method(http.MethodPost, s.uploadEvidence))
+	mux.HandleFunc("/app/proofpacks", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			s.listProofpacks(w, r)
+			return
+		}
+		if r.Method == http.MethodPost {
+			s.createProofpack(w, r)
+			return
+		}
+		http.Error(w, "method not allowed", 405)
+	})
+	mux.HandleFunc("/api/cron/reminders", method(http.MethodPost, s.runReminders))
+	mux.HandleFunc("/billing/checkout", method(http.MethodPost, s.checkout))
+	mux.HandleFunc("/billing/portal", method(http.MethodPost, s.portal))
+	mux.HandleFunc("/webhooks/stripe", method(http.MethodPost, s.webhook))
+	return mux
 }
 func (s Server) authContext(w http.ResponseWriter, r *http.Request) (auth.Context, bool) {
 	c, err := auth.FromRequest(r)
@@ -96,22 +121,6 @@ func (s Server) createEvidence(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = json.NewEncoder(w).Encode(map[string]string{"id": id})
 }
-func (s Server) updateEvidence(w http.ResponseWriter, r *http.Request) {
-	c, ok := s.authContext(w, r)
-	if !ok {
-		return
-	}
-	var it evidence.Item
-	if err := json.NewDecoder(r.Body).Decode(&it); err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-	if err := s.Evidence.Update(r.Context(), c.TenantID, chi.URLParam(r, "id"), it); err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-	w.WriteHeader(204)
-}
 func (s Server) uploadEvidence(w http.ResponseWriter, r *http.Request) {
 	c, ok := s.authContext(w, r)
 	if !ok {
@@ -131,10 +140,6 @@ func (s Server) uploadEvidence(w http.ResponseWriter, r *http.Request) {
 	ctype := hdr.Header.Get("Content-Type")
 	if !strings.HasPrefix(ctype, "application/pdf") && !strings.HasPrefix(ctype, "image/") && ctype != "text/plain" {
 		http.Error(w, "unsupported MIME type", 400)
-		return
-	}
-	if hdr.Size > 10<<20 {
-		http.Error(w, "file too large", 400)
 		return
 	}
 	loc, err := s.Storage.Upload(r.Context(), hdr.Filename, file)
@@ -225,5 +230,3 @@ func (s Server) webhook(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(200)
 }
-
-var _ = strconv.IntSize

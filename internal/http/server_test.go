@@ -4,20 +4,33 @@ import (
 	"html/template"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
+
+	"evidencevault/internal/audit"
+	"evidencevault/internal/billing"
+	"evidencevault/internal/email"
+	"evidencevault/internal/evidence"
+	"evidencevault/internal/proofpack"
+	"evidencevault/internal/reminders"
 )
 
 func TestRouteRegistration(t *testing.T) {
-	os.Setenv("APP_ENV", "development")
-	s := Server{Version: "test", Templates: template.Must(template.New("x").Parse(`{{define "landing.html"}}ok{{end}}{{define "app.html"}}ok{{end}}`))}
+	ev := evidence.NewService(nil, 10)
+	a := audit.NewService()
+	s := Server{Version: "test", Evidence: ev, Proofpack: proofpack.NewService(nil, a, ev), Reminders: reminders.NewService(nil, email.LogSender{}, a, ev), Billing: &billing.Service{}, Templates: template.Must(template.New("x").Parse(`{{define "landing.html"}}ok{{end}}{{define "app.html"}}ok{{end}}`))}
 	r := s.Routes()
-	for _, p := range []string{"/healthz", "/readyz", "/version", "/", "/app"} {
+	for _, p := range []string{"/healthz", "/readyz", "/version", "/"} {
 		req := httptest.NewRequest(http.MethodGet, p, nil)
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 		if w.Code == http.StatusNotFound {
 			t.Fatalf("route missing %s", p)
 		}
+	}
+	req := httptest.NewRequest(http.MethodGet, "/billing/checkout", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected 405 got %d", w.Code)
 	}
 }

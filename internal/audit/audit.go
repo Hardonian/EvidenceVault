@@ -2,12 +2,39 @@ package audit
 
 import (
 	"context"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"sync"
+	"time"
 )
 
-type Service struct{ db *pgxpool.Pool }
+type Entry struct {
+	TenantID, UserID, Action, EntityType, EntityID, Metadata string
+	CreatedAt                                                time.Time
+}
 
-func NewService(db *pgxpool.Pool) *Service { return &Service{db: db} }
-func (s *Service) Log(ctx context.Context, tenantID, userID, action, entity, entityID, data string) {
-	_, _ = s.db.Exec(ctx, `insert into audit_logs (tenant_id, user_id, action, entity_type, entity_id, metadata) values ($1,$2,$3,$4,$5,$6::jsonb)`, tenantID, userID, action, entity, entityID, data)
+type Service struct {
+	mu      sync.Mutex
+	entries []Entry
+}
+
+func NewService() *Service { return &Service{} }
+func (s *Service) Log(_ context.Context, tenantID, userID, action, entity, entityID, data string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.entries = append(s.entries, Entry{TenantID: tenantID, UserID: userID, Action: action, EntityType: entity, EntityID: entityID, Metadata: data, CreatedAt: time.Now().UTC()})
+}
+func (s *Service) ListByTenant(tenantID string, limit int) []map[string]any {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := []map[string]any{}
+	for i := len(s.entries) - 1; i >= 0; i-- {
+		e := s.entries[i]
+		if e.TenantID != tenantID {
+			continue
+		}
+		out = append(out, map[string]any{"action": e.Action, "entity_type": e.EntityType, "entity_id": e.EntityID, "created_at": e.CreatedAt})
+		if limit > 0 && len(out) >= limit {
+			break
+		}
+	}
+	return out
 }
