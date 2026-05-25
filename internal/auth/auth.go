@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -93,12 +92,4 @@ func verifySession(token, secret string) (Context, error) {
 		return Context{}, errors.New("invalid session claims")
 	}
 	return Context{TenantID: parts[0], UserID: parts[1]}, nil
-}
-
-func SignSession(tenantID, userID, secret string) string {
-	payload := fmt.Sprintf("%s|%s", tenantID, userID)
-	mac := hmac.New(sha256.New, []byte(secret))
-	_, _ = mac.Write([]byte(payload))
-	sig := base64.StdEncoding.EncodeToString(mac.Sum(nil))
-	return base64.StdEncoding.EncodeToString([]byte(payload + "|" + sig))
 }

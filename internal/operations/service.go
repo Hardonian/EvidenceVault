@@ -94,6 +94,36 @@ func reviewStreak(arr []persistence.ReviewSnapshot) int {
 	return streak
 }
 
+func evaluateItem(it evidence.Item, now time.Time, s *Summary, o *OwnerSummary) {
+	o.Total++
+	if it.Status == "expired" {
+		s.Expired++
+		s.Unresolved++
+		o.Unresolved++
+		s.HealthScore -= 25
+	}
+	if it.Status == "expiring" {
+		s.ExpiringSoon++
+		s.Unresolved++
+		o.Unresolved++
+		s.HealthScore -= 10
+	}
+	if strings.TrimSpace(it.OwnerEmail) == "" && strings.TrimSpace(it.OwnerName) == "" {
+		s.MissingOwner++
+		s.Unresolved++
+		s.HealthScore -= 15
+	}
+	if it.Status == "active" {
+		s.HealthScore += 1
+	}
+	if it.UpdatedAt.Before(now.AddDate(0, 0, -180)) {
+		s.StaleEvidence++
+		s.Unresolved++
+		o.Unresolved++
+		s.HealthScore -= 8
+	}
+}
+
 func evaluate(items []evidence.Item, now time.Time) Summary {
 	s := Summary{HealthScore: 100}
 	owners := map[string]*OwnerSummary{}
@@ -102,34 +132,7 @@ func evaluate(items []evidence.Item, now time.Time) Summary {
 		if _, ok := owners[key]; !ok {
 			owners[key] = &OwnerSummary{OwnerName: it.OwnerName, OwnerEmail: it.OwnerEmail}
 		}
-		o := owners[key]
-		o.Total++
-		if it.Status == "expired" {
-			s.Expired++
-			s.Unresolved++
-			o.Unresolved++
-			s.HealthScore -= 25
-		}
-		if it.Status == "expiring" {
-			s.ExpiringSoon++
-			s.Unresolved++
-			o.Unresolved++
-			s.HealthScore -= 10
-		}
-		if strings.TrimSpace(it.OwnerEmail) == "" && strings.TrimSpace(it.OwnerName) == "" {
-			s.MissingOwner++
-			s.Unresolved++
-			s.HealthScore -= 15
-		}
-		if it.Status == "active" {
-			s.HealthScore += 1
-		}
-		if it.UpdatedAt.Before(now.AddDate(0, 0, -180)) {
-			s.StaleEvidence++
-			s.Unresolved++
-			o.Unresolved++
-			s.HealthScore -= 8
-		}
+		evaluateItem(it, now, &s, owners[key])
 	}
 	if s.HealthScore < 0 {
 		s.HealthScore = 0
