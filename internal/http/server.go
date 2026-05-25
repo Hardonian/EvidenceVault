@@ -44,10 +44,21 @@ func method(m string, h http.HandlerFunc) http.HandlerFunc {
 }
 func (s Server) Routes() http.Handler {
 	mux := http.NewServeMux()
+	s.registerSystemRoutes(mux)
+	s.registerAppRoutes(mux)
+	s.registerAPIRoutes(mux)
+	s.registerBillingRoutes(mux)
+	return mux
+}
+
+func (s Server) registerSystemRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/healthz", method(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200); _, _ = w.Write([]byte("ok")) }))
 	mux.HandleFunc("/readyz", method(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200); _, _ = w.Write([]byte("ready")) }))
 	mux.HandleFunc("/version", method(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(s.Version)) }))
 	mux.HandleFunc("/", method(http.MethodGet, s.landing))
+}
+
+func (s Server) registerAppRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/app", method(http.MethodGet, s.app))
 	mux.HandleFunc("/app/evidence", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
@@ -73,12 +84,17 @@ func (s Server) Routes() http.Handler {
 		}
 		http.Error(w, "method not allowed", 405)
 	})
-	mux.HandleFunc("/api/cron/reminders", method(http.MethodPost, s.runReminders))
 	mux.HandleFunc("/app/reviews", method(http.MethodPost, s.generateReview))
+}
+
+func (s Server) registerAPIRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/api/cron/reminders", method(http.MethodPost, s.runReminders))
+}
+
+func (s Server) registerBillingRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/billing/checkout", method(http.MethodPost, s.checkout))
 	mux.HandleFunc("/billing/portal", method(http.MethodPost, s.portal))
 	mux.HandleFunc("/webhooks/stripe", method(http.MethodPost, s.webhook))
-	return mux
 }
 func (s Server) authContext(w http.ResponseWriter, r *http.Request) (auth.Context, bool) {
 	c, err := auth.FromRequest(r)
