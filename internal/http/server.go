@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"html/template"
-	"io"
-	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"evidencevault/internal/auth"
@@ -31,21 +30,16 @@ type Server struct {
 
 func (s Server) Routes() http.Handler {
 	r := chi.NewRouter()
-	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	})
-	r.Get("/readyz", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ready"))
-	})
+	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200); _, _ = w.Write([]byte("ok")) })
+	r.Get("/readyz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200); _, _ = w.Write([]byte("ready")) })
 	r.Get("/version", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(s.Version)) })
 	r.Get("/", s.landing)
 	r.Get("/app", s.app)
 	r.Get("/app/evidence", s.listEvidence)
 	r.Post("/app/evidence", s.createEvidence)
+	r.Put("/app/evidence/{id}", s.updateEvidence)
 	r.Post("/app/evidence/upload", s.uploadEvidence)
-	r.Get("/app/proofpacks", s.getProofpack)
+	r.Get("/app/proofpacks", s.listProofpacks)
 	r.Post("/app/proofpacks", s.createProofpack)
 	r.Post("/api/cron/reminders", s.runReminders)
 	r.Post("/billing/checkout", s.checkout)
@@ -53,7 +47,6 @@ func (s Server) Routes() http.Handler {
 	r.Post("/webhooks/stripe", s.webhook)
 	return r
 }
-
 func (s Server) authContext(w http.ResponseWriter, r *http.Request) (auth.Context, bool) {
 	c, err := auth.FromRequest(r)
 	if err != nil {
@@ -71,7 +64,8 @@ func (s Server) app(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	items, _ := s.Evidence.List(r.Context(), c.TenantID)
-	_ = s.Templates.ExecuteTemplate(w, "app.html", map[string]any{"Tenant": c.TenantID, "Items": items})
+	packs, _ := s.Proofpack.List(r.Context(), c.TenantID)
+	_ = s.Templates.ExecuteTemplate(w, "app.html", map[string]any{"Tenant": c.TenantID, "Items": items, "Proofpacks": packs})
 }
 func (s Server) listEvidence(w http.ResponseWriter, r *http.Request) {
 	c, ok := s.authContext(w, r)
@@ -102,8 +96,30 @@ func (s Server) createEvidence(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = json.NewEncoder(w).Encode(map[string]string{"id": id})
 }
+func (s Server) updateEvidence(w http.ResponseWriter, r *http.Request) {
+	c, ok := s.authContext(w, r)
+	if !ok {
+		return
+	}
+	var it evidence.Item
+	if err := json.NewDecoder(r.Body).Decode(&it); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	if err := s.Evidence.Update(r.Context(), c.TenantID, chi.URLParam(r, "id"), it); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	w.WriteHeader(204)
+}
 func (s Server) uploadEvidence(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.authContext(w, r); !ok {
+	c, ok := s.authContext(w, r)
+	if !ok {
+		return
+	}
+	evidenceID := r.FormValue("evidence_id")
+	if evidenceID == "" {
+		http.Error(w, "evidence_id is required", 400)
 		return
 	}
 	file, hdr, err := r.FormFile("file")
@@ -126,9 +142,24 @@ func (s Server) uploadEvidence(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "storage unavailable: "+err.Error(), 503)
 		return
 	}
+	if err := s.Evidence.AttachFile(r.Context(), c.TenantID, evidenceID, loc, ctype, hdr.Size); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
 	_ = json.NewEncoder(w).Encode(map[string]string{"path": loc})
 }
-func (s Server) getProofpack(w http.ResponseWriter, r *http.Request) { s.createProofpack(w, r) }
+func (s Server) listProofpacks(w http.ResponseWriter, r *http.Request) {
+	c, ok := s.authContext(w, r)
+	if !ok {
+		return
+	}
+	packs, err := s.Proofpack.List(r.Context(), c.TenantID)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	_ = json.NewEncoder(w).Encode(packs)
+}
 func (s Server) createProofpack(w http.ResponseWriter, r *http.Request) {
 	c, ok := s.authContext(w, r)
 	if !ok {
@@ -159,7 +190,7 @@ func (s Server) checkout(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	url, err := s.Billing.CheckoutURL(c.TenantID)
+	url, err := s.Billing.CheckoutURL(r.Context(), c.TenantID)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
@@ -171,7 +202,7 @@ func (s Server) portal(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	url, err := s.Billing.PortalURL(c.TenantID)
+	url, err := s.Billing.PortalURL(r.Context(), c.TenantID)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
@@ -192,8 +223,7 @@ func (s Server) webhook(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	slog.Info("stripe_webhook", "type", event.Type, "id", event.ID, "bytes", len(payload))
 	w.WriteHeader(200)
 }
 
-var _ = io.EOF
+var _ = strconv.IntSize

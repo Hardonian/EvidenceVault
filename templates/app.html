@@ -1,1 +1,20 @@
-<!doctype html><html><body><h1>EvidenceVault App</h1><p>Tenant: {{.Tenant}}</p>{{range .Items}}<div>{{.Title}} - {{.Status}}</div>{{else}}<div>No evidence yet.</div>{{end}}</body></html>
+<!doctype html>
+<html><body>
+<h1>EvidenceVault App</h1>
+<p>Tenant: {{.Tenant}}</p>
+<h2>Create Evidence</h2>
+<form method="post" action="/app/evidence">
+<textarea name="json" rows="4" cols="80">{"title":"Policy","category":"Compliance","status":"active","reminder_days_before":30}</textarea>
+</form>
+<h2>Evidence</h2>
+<table border="1"><tr><th>Title</th><th>Status</th><th>Owner</th><th>File</th></tr>
+{{range .Items}}<tr><td>{{.Title}}</td><td>{{.Status}}</td><td>{{.OwnerEmail}}</td><td>{{.SourceFilePath}}</td></tr>{{else}}<tr><td colspan="4">No evidence yet.</td></tr>{{end}}
+</table>
+<h2>Upload Evidence File</h2>
+<form method="post" action="/app/evidence/upload" enctype="multipart/form-data">
+<input name="evidence_id" placeholder="evidence id" /> <input type="file" name="file" /> <button>Upload</button>
+</form>
+<h2>Proofpacks</h2>
+<form method="post" action="/app/proofpacks"><button>Generate Proofpack</button></form>
+<ul>{{range .Proofpacks}}<li>{{.id}} - {{.created_at}}</li>{{else}}<li>No proofpacks yet.</li>{{end}}</ul>
+</body></html>
