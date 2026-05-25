@@ -10,3 +10,6 @@
 
 ## Operational continuity memory
 EvidenceVault emphasizes deterministic operational memory, recurring reviews, and historical truth without AI or analytics theatre.
+
+## Continuity Value
+Pricing aligns to continuity depth: recurring reviews, historical reports, narrative history, and export portability increase switching cost through operational memory.
