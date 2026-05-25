@@ -33,7 +33,7 @@ func TestSeedCreatesExpectedEvidence(t *testing.T) {
 	if len(items) < 4 {
 		t.Fatalf("expected richer seed")
 	}
-	sum, _ := ops.BuildSummary(context.Background(), "tenant")
+	sum, _ := ops.BuildSummary(context.Background(), "tenant", nil)
 	if len(sum.RecentActivity) == 0 || len(sum.ProofpackHistory) == 0 {
 		t.Fatal("expected demo activity/history")
 	}
