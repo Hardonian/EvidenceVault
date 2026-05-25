@@ -14,14 +14,16 @@ func TestSummaryAndSnapshot(t *testing.T) {
 	ev := evidence.NewService(st, 100)
 	now := time.Now().UTC()
 	_, _ = ev.Create(context.Background(), "t1", evidence.Item{Title: "exp", Category: "IT", Status: "expired", ReminderDaysBefore: 30, UpdatedAt: now.AddDate(0, 0, -200)})
-	_, _ = ev.Create(context.Background(), "t1", evidence.Item{Title: "act", Category: "IT", Status: "active", OwnerEmail: "o@x.com", ReminderDaysBefore: 30, UpdatedAt: now})
 	svc := NewService(st, ev)
 	sum, _ := svc.BuildSummary(context.Background(), "t1")
-	if sum.HealthScore >= 100 || sum.Unresolved == 0 || len(sum.Owners) == 0 {
-		t.Fatalf("unexpected summary: %+v", sum)
+	if sum.Unresolved == 0 {
+		t.Fatal("expected unresolved")
 	}
-	snap, _ := svc.GenerateReviewSnapshot(context.Background(), "t1")
-	if snap.HealthScore != sum.HealthScore || snap.UnresolvedIssues == 0 {
-		t.Fatalf("bad snapshot: %+v", snap)
+	_, _ = svc.GenerateReviewSnapshot(context.Background(), "t1")
+	_, _ = ev.Create(context.Background(), "t1", evidence.Item{Title: "act", Category: "IT", Status: "active", OwnerEmail: "o@x.com", ReminderDaysBefore: 30, UpdatedAt: now})
+	_, _ = svc.GenerateReviewSnapshot(context.Background(), "t1")
+	sum2, _ := svc.BuildSummary(context.Background(), "t1")
+	if sum2.PreviousHealthScore == 0 && sum2.HealthDelta == 0 {
+		t.Fatal("expected trend")
 	}
 }

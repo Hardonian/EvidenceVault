@@ -1,56 +1,10 @@
-<!doctype html>
-<html lang="en">
-<body style="font-family: sans-serif; max-width: 1100px; margin: 1.5rem auto; line-height: 1.4;">
-<h1>EvidenceVault App</h1>
-<p>Tenant: {{.Tenant}}</p>
-{{if .Dashboard.DegradedWarnings}}
-<div style="padding: 0.75rem; border: 1px solid #a66; background: #fff3f3;">
-<strong>Degraded / mode notice:</strong>
-<ul>{{range .Dashboard.DegradedWarnings}}<li>{{.}}</li>{{end}}</ul>
-</div>
-{{end}}
-<h2>Start here</h2>
-<ol>
-<li>Create evidence with title, category, owner, and expiry date.</li>
-<li>Copy the created evidence ID from API response, then upload supporting file using that ID.</li>
-<li>Generate a proofpack and keep it with your renewal process.</li>
-</ol>
-<h2>Plan usage</h2>
-<ul>
-<li>Plan: {{.Dashboard.Plan}}</li>
-<li>Usage: {{.Dashboard.FreeTierUsage}}</li>
-<li>Persistence mode: {{.Dashboard.PersistenceMode}}</li>
-</ul>
-<h2>Dashboard</h2>
-<ul>
-<li>Total evidence: {{.Dashboard.TotalEvidence}}</li><li>Expiring soon: {{.Dashboard.ExpiringSoon}}</li><li>Expired: {{.Dashboard.Expired}}</li><li>Missing owner: {{.Dashboard.MissingOwner}}</li><li>Total proofpacks: {{.Dashboard.TotalProofpacks}}</li><li>Latest proofpack: {{.Dashboard.LatestProofpackTime}}</li>
-</ul>
-<h2>Operational review</h2>
-<ul>
-<li>Health score: {{.Dashboard.HealthScore}}</li>
-<li>Unresolved issues: {{.Dashboard.UnresolvedIssues}}</li>
-<li>Stale evidence (&gt;180d): {{.Dashboard.StaleEvidence}}</li>
-<li>Last reviewed: {{.Dashboard.LastReviewedAt}}</li>
-<li>Next recommended review: {{.Dashboard.NextRecommendedReview}}</li>
-</ul>
+<!doctype html><html lang="en"><body style="font-family: sans-serif; max-width: 1100px; margin: 1.5rem auto; line-height: 1.4;">
+<h1>EvidenceVault App</h1><p>Tenant: {{.Tenant}}</p>
+{{if .Dashboard.Onboarding}}<div style="padding:1rem;border:1px solid #6aa;background:#f2fffb;"><h2>First 3 evidence records (guided start)</h2><ol><li>Create an <b>insurance certificate</b> and assign an owner.</li><li>Create a <b>privacy policy</b> and set next review date.</li><li>Create a <b>vendor agreement</b> and set expiry reminder.</li></ol><p>Categories group operational work. Health score drops when evidence is expired, stale, or unowned. Run weekly operational review snapshots and export proofpacks monthly to keep continuity.</p></div>{{end}}
+<h2>Create from template</h2><form method="post" action="/app/evidence/template"><select name="template">{{range .Dashboard.StarterTemplates}}<option value="{{.Key}}">{{.Name}} — {{.Description}}</option>{{end}}</select><button>Create from template</button></form>
+<h2>Operational urgency (priority order)</h2><ol>{{range .Dashboard.PriorityQueue}}<li>{{.Label}}: {{.Count}}</li>{{end}}</ol>
+<h2>Health trend</h2><ul><li>Current score: {{.Dashboard.HealthScore}}</li><li>Previous review score: {{.Dashboard.PreviousHealthScore}}</li><li>Score delta: {{.Dashboard.HealthDelta}}</li><li>Unresolved delta: {{.Dashboard.UnresolvedDelta}}</li><li>Review streak: {{.Dashboard.ReviewCompletionStreak}}</li><li>Days since last review: {{.Dashboard.DaysSinceLastReview}}</li><li>Last activity: {{.Dashboard.LastActivityAt}}</li></ul>
 <form method="post" action="/app/reviews"><button>Generate review snapshot (JSON)</button></form>
-<h3>Cadence recommendations</h3><ul>{{range .Dashboard.Cadence}}<li>{{.}}</li>{{end}}</ul>
-<h3>Evidence by owner</h3><ul>{{range .Dashboard.OwnerSummaries}}<li>{{if .OwnerEmail}}{{.OwnerEmail}}{{else}}unassigned{{end}}: {{.Total}} total, {{.Unresolved}} unresolved</li>{{else}}<li>No owners yet.</li>{{end}}</ul>
-<h3>Recent operational activity</h3><ul>{{range .Dashboard.RecentActivity}}<li>{{.CreatedAt}} - {{.Type}} - {{.Message}}</li>{{else}}<li>No activity yet.</li>{{end}}</ul>
-
-<h2>Create Evidence (JSON via API)</h2>
-<p>POST <code>/app/evidence</code> with X-Tenant-ID and X-User-ID headers. Use statuses: active, expiring, expired, missing, archived.</p>
-<h2>Evidence</h2>
-<table border="1"><tr><th>Title</th><th>Category</th><th>Status</th><th>Owner</th><th>File</th></tr>
-{{range .Items}}<tr><td>{{.Title}}</td><td>{{.Category}}</td><td>{{.Status}}</td><td>{{.OwnerEmail}}</td><td>{{.SourceFilePath}}</td></tr>{{else}}<tr><td colspan="5">No evidence yet.</td></tr>{{end}}
-</table>
-<h2>Upload Evidence File</h2>
-<p>Requires a valid <code>evidence_id</code> from created evidence.</p>
-<form method="post" action="/app/evidence/upload" enctype="multipart/form-data">
-<input name="evidence_id" placeholder="evidence id" required/> <input type="file" name="file" required/> <button>Upload</button>
-</form>
-<h2>Proofpacks</h2>
-<p>Proofpack exports your evidence list, linked files metadata, and audit summary.</p>
-<form method="post" action="/app/proofpacks"><button>Generate Proofpack</button></form>
-<ul>{{range .Proofpacks}}<li>{{.id}} - {{.created_at}}</li>{{else}}<li>No proofpacks yet.</li>{{end}}</ul>
+<h2>Evidence</h2><table border="1"><tr><th>Title</th><th>Category</th><th>Status</th><th>Owner</th></tr>{{range .Items}}<tr><td>{{.Title}}</td><td>{{.Category}}</td><td>{{.Status}}</td><td>{{.OwnerEmail}}</td></tr>{{else}}<tr><td colspan="4">No evidence yet. Use templates above.</td></tr>{{end}}</table>
+<h2>Proofpacks</h2><form method="post" action="/app/proofpacks"><button>Generate Proofpack</button></form><ul>{{range .Proofpacks}}<li>{{.id}} - {{.created_at}}</li>{{else}}<li>No proofpacks yet.</li>{{end}}</ul>
 </body></html>

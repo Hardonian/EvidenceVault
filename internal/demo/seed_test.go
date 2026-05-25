@@ -5,25 +5,36 @@ import (
 	"errors"
 	"testing"
 
+	"evidencevault/internal/audit"
 	"evidencevault/internal/evidence"
+	"evidencevault/internal/operations"
 	"evidencevault/internal/persistence"
+	"evidencevault/internal/proofpack"
 )
 
 func TestSeedBlockedInProduction(t *testing.T) {
-	ev := evidence.NewService(persistence.NewMemoryStore(), 10)
-	err := Seed(context.Background(), "production", true, ev, "tenant")
+	st := persistence.NewMemoryStore()
+	ev := evidence.NewService(st, 10)
+	err := Seed(context.Background(), "production", true, ev, nil, nil, "tenant")
 	if !errors.Is(err, ErrDemoSeedBlockedInProduction) {
 		t.Fatalf("expected blocked error, got %v", err)
 	}
 }
 
 func TestSeedCreatesExpectedEvidence(t *testing.T) {
-	ev := evidence.NewService(persistence.NewMemoryStore(), 10)
-	if err := Seed(context.Background(), "development", true, ev, "tenant"); err != nil {
+	st := persistence.NewMemoryStore()
+	ev := evidence.NewService(st, 10)
+	ops := operations.NewService(st, ev)
+	pp := proofpack.NewService(st, audit.NewService(st), ev)
+	if err := Seed(context.Background(), "development", true, ev, ops, pp, "tenant"); err != nil {
 		t.Fatal(err)
 	}
 	items, _ := ev.List(context.Background(), "tenant")
-	if len(items) != 3 {
-		t.Fatalf("expected 3 items got %d", len(items))
+	if len(items) < 4 {
+		t.Fatalf("expected richer seed")
+	}
+	sum, _ := ops.BuildSummary(context.Background(), "tenant")
+	if len(sum.RecentActivity) == 0 || len(sum.ProofpackHistory) == 0 {
+		t.Fatal("expected demo activity/history")
 	}
 }

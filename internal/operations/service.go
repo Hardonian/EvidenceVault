@@ -23,7 +23,9 @@ type Activity struct {
 
 type Summary struct {
 	HealthScore, Expired, ExpiringSoon, MissingOwner, StaleEvidence, Unresolved int
-	LastReviewedAt, NextRecommendedReview                                       time.Time
+	PreviousHealthScore, HealthDelta, UnresolvedDelta                           int
+	ReviewCompletionStreak, DaysSinceLastReview                                 int
+	LastReviewedAt, NextRecommendedReview, LastActivityAt                       time.Time
 	Owners                                                                      []OwnerSummary
 	RecentActivity                                                              []Activity
 	ProofpackHistory                                                            []persistence.ProofpackMeta
@@ -52,14 +54,44 @@ func (s *Service) BuildSummary(ctx context.Context, tenantID string) (Summary, e
 		}
 		sum.ProofpackHistory = append([]persistence.ProofpackMeta{}, st.Proofpacks[tenantID]...)
 		for i, ev := range st.OperationalEvents[tenantID] {
+			if i == 0 {
+				sum.LastActivityAt = ev.CreatedAt
+			}
 			if i >= 8 {
 				break
 			}
 			sum.RecentActivity = append(sum.RecentActivity, Activity{Type: ev.Type, Message: ev.Message, EntityID: ev.EntityID, CreatedAt: ev.CreatedAt})
 		}
+		if arr := st.ReviewSnapshots[tenantID]; len(arr) > 1 {
+			sum.PreviousHealthScore = arr[1].HealthScore
+			sum.HealthDelta = sum.HealthScore - arr[1].HealthScore
+			sum.UnresolvedDelta = sum.Unresolved - arr[1].UnresolvedIssues
+		}
+		if arr := st.ReviewSnapshots[tenantID]; len(arr) > 0 {
+			sum.ReviewCompletionStreak = reviewStreak(arr)
+		}
 		return nil
 	})
+	if !sum.LastReviewedAt.IsZero() {
+		sum.DaysSinceLastReview = int(now.Sub(sum.LastReviewedAt).Hours() / 24)
+	}
 	return sum, nil
+}
+
+func reviewStreak(arr []persistence.ReviewSnapshot) int {
+	if len(arr) == 0 {
+		return 0
+	}
+	streak := 1
+	for i := 1; i < len(arr); i++ {
+		d := arr[i-1].LastReviewedAt.Sub(arr[i].LastReviewedAt)
+		if d.Hours() <= 24*9 {
+			streak++
+			continue
+		}
+		break
+	}
+	return streak
 }
 
 func evaluate(items []evidence.Item, now time.Time) Summary {

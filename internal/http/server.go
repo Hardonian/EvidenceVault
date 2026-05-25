@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"net/http"
 	"strings"
+	"time"
 
 	"evidencevault/internal/auth"
 	"evidencevault/internal/billing"
@@ -60,6 +61,7 @@ func (s Server) Routes() http.Handler {
 		http.Error(w, "method not allowed", 405)
 	})
 	mux.HandleFunc("/app/evidence/upload", method(http.MethodPost, s.uploadEvidence))
+	mux.HandleFunc("/app/evidence/template", method(http.MethodPost, s.createEvidenceFromTemplate))
 	mux.HandleFunc("/app/proofpacks", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			s.listProofpacks(w, r)
@@ -131,6 +133,29 @@ func (s Server) createEvidence(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = json.NewEncoder(w).Encode(map[string]string{"id": id})
 }
+
+func (s Server) createEvidenceFromTemplate(w http.ResponseWriter, r *http.Request) {
+	c, ok := s.authContext(w, r)
+	if !ok {
+		return
+	}
+	key := r.FormValue("template")
+	t, found := evidence.TemplateByKey(time.Now().UTC(), key)
+	if !found {
+		http.Error(w, "unknown template", 400)
+		return
+	}
+	id, err := s.Evidence.Create(r.Context(), c.TenantID, t.Item)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	if s.Operations != nil {
+		s.Operations.RecordEvent(c.TenantID, "evidence.template.created", "Evidence created from template", id)
+	}
+	http.Redirect(w, r, "/app", http.StatusSeeOther)
+}
+
 func (s Server) uploadEvidence(w http.ResponseWriter, r *http.Request) {
 	c, ok := s.authContext(w, r)
 	if !ok {
