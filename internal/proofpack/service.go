@@ -22,7 +22,7 @@ func NewService(store persistence.Store, auditSvc *audit.Service, ev *evidence.S
 }
 func (s *Service) List(_ context.Context, tenantID string) ([]map[string]any, error) {
 	out := []map[string]any{}
-	_ = s.store.WithLock(func(st *persistence.State) error {
+	_ = s.store.Read(func(st *persistence.State) error {
 		for _, p := range st.Proofpacks[tenantID] {
 			out = append(out, map[string]any{"id": p.ID, "created_at": p.CreatedAt})
 		}
@@ -38,7 +38,7 @@ func (s *Service) Export(ctx context.Context, tenantID, version string) ([]byte,
 		return nil, err
 	}
 	pid := id.New()
-	_ = s.store.WithLock(func(st *persistence.State) error {
+	_ = s.store.Write(func(st *persistence.State) error {
 		st.Proofpacks[tenantID] = append([]persistence.ProofpackMeta{{ID: pid, CreatedAt: time.Now().UTC()}}, st.Proofpacks[tenantID]...)
 		return nil
 	})

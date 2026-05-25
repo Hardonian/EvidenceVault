@@ -62,15 +62,21 @@ type State struct {
 }
 
 type Store interface {
-	WithLock(func(*State) error) error
+	Read(func(*State) error) error
+	Write(func(*State) error) error
 }
 type MemoryStore struct {
-	mu    sync.Mutex
+	mu    sync.RWMutex
 	state State
 }
 
 func NewMemoryStore() *MemoryStore { return &MemoryStore{state: emptyState()} }
-func (m *MemoryStore) WithLock(fn func(*State) error) error {
+func (m *MemoryStore) Read(fn func(*State) error) error {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return fn(&m.state)
+}
+func (m *MemoryStore) Write(fn func(*State) error) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return fn(&m.state)

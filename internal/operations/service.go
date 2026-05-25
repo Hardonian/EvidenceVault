@@ -47,7 +47,7 @@ func (s *Service) BuildSummary(ctx context.Context, tenantID string) (Summary, e
 	sum := evaluate(items, now)
 	sum.NextRecommendedReview = now.AddDate(0, 0, 7)
 	sum.Cadence = []string{"Weekly operational review", "Monthly proofpack export", "Quarterly evidence audit"}
-	_ = s.store.WithLock(func(st *persistence.State) error {
+	_ = s.store.Read(func(st *persistence.State) error {
 		if arr := st.ReviewSnapshots[tenantID]; len(arr) > 0 {
 			sum.LastReviewedAt = arr[0].LastReviewedAt
 			sum.NextRecommendedReview = arr[0].NextRecommendedReview
@@ -148,7 +148,7 @@ func (s *Service) GenerateReviewSnapshot(ctx context.Context, tenantID string) (
 	sum, _ := s.BuildSummary(ctx, tenantID)
 	now := time.Now().UTC()
 	snap := persistence.ReviewSnapshot{TenantID: tenantID, GeneratedAt: now, LastReviewedAt: now, NextRecommendedReview: now.AddDate(0, 0, 7), HealthScore: sum.HealthScore, UnresolvedIssues: sum.Unresolved, ExpiredEvidence: sum.Expired, ExpiringEvidence: sum.ExpiringSoon, StaleEvidence: sum.StaleEvidence, MissingOwners: sum.MissingOwner, Disclaimer: disclaimer}
-	_ = s.store.WithLock(func(st *persistence.State) error {
+	_ = s.store.Write(func(st *persistence.State) error {
 		st.ReviewSnapshots[tenantID] = append([]persistence.ReviewSnapshot{snap}, st.ReviewSnapshots[tenantID]...)
 		st.OperationalEvents[tenantID] = append([]persistence.OperationalEvent{{TenantID: tenantID, Type: "review.snapshot.generated", Message: "Operational review snapshot generated", CreatedAt: now}}, st.OperationalEvents[tenantID]...)
 		return nil
@@ -157,7 +157,7 @@ func (s *Service) GenerateReviewSnapshot(ctx context.Context, tenantID string) (
 }
 
 func (s *Service) RecordEvent(tenantID, typ, message, entityID string) {
-	_ = s.store.WithLock(func(st *persistence.State) error {
+	_ = s.store.Write(func(st *persistence.State) error {
 		st.OperationalEvents[tenantID] = append([]persistence.OperationalEvent{{TenantID: tenantID, Type: typ, Message: message, EntityID: entityID, CreatedAt: time.Now().UTC()}}, st.OperationalEvents[tenantID]...)
 		return nil
 	})

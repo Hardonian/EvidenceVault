@@ -33,7 +33,7 @@ func (s *Service) Run(ctx context.Context) (int, error) {
 		}
 		k := it.ID + ":" + today
 		dup := false
-		_ = s.store.WithLock(func(st *persistence.State) error {
+		_ = s.store.Write(func(st *persistence.State) error {
 			_, dup = st.ReminderSent[k]
 			if !dup {
 				st.ReminderSent[k] = struct{}{}
