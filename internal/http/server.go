@@ -334,7 +334,7 @@ func (s Server) exportReviewCSV(w http.ResponseWriter, r *http.Request) {
 	}
 	var snaps []operations.Summary
 	if s.Operations != nil {
-		sum, _ := s.Operations.BuildSummary(r.Context(), c.TenantID)
+		sum, _ := s.Operations.BuildSummary(r.Context(), c.TenantID, nil)
 		snaps = append(snaps, sum)
 	}
 	var b bytes.Buffer

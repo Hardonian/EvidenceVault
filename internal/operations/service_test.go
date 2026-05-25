@@ -38,11 +38,27 @@ func TestActivationAndMaturity(t *testing.T) {
 	svc.RecordEvent("t2", "evidence.file.uploaded", "Evidence file uploaded", id)
 	svc.RecordEvent("t2", "proofpack.generated", "Proofpack exported", "")
 	_, _ = svc.GenerateReviewSnapshot(ctx, "t2")
-	sum, _ := svc.BuildSummary(ctx, "t2")
+	sum, _ := svc.BuildSummary(ctx, "t2", nil)
 	if sum.ActivationCompletionPercent == 0 || sum.PilotMaturityStage == "exploring" {
 		t.Fatal("expected activation progress")
 	}
 	if len(sum.ActivationChecklist) != 6 {
 		t.Fatal("expected 6 milestones")
+	}
+}
+
+func TestOperationalSnapshotAndReport(t *testing.T) {
+	st := persistence.NewMemoryStore()
+	ev := evidence.NewService(st, 100)
+	svc := NewService(st, ev)
+	ctx := context.Background()
+	_, _ = ev.Create(ctx, "t3", evidence.Item{Title: "x", Category: "Ops", Status: "active", OwnerEmail: "a@b.com", ReminderDaysBefore: 7})
+	snap, err := svc.GenerateOperationalSnapshot(ctx, "t3")
+	if err != nil || snap.Date == "" {
+		t.Fatal("expected snapshot")
+	}
+	rep, err := svc.GenerateReviewReport(ctx, "t3")
+	if err != nil || rep.Markdown == "" || rep.HTML == "" {
+		t.Fatal("expected review report exports")
 	}
 }
