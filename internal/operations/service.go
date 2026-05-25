@@ -51,8 +51,10 @@ func NewService(store persistence.Store, ev *evidence.Service) *Service {
 	return &Service{store: store, evidence: ev}
 }
 
-func (s *Service) BuildSummary(ctx context.Context, tenantID string) (Summary, error) {
-	items, _ := s.evidence.List(ctx, tenantID)
+func (s *Service) BuildSummary(ctx context.Context, tenantID string, items []evidence.Item) (Summary, error) {
+	if items == nil {
+		items, _ = s.evidence.List(ctx, tenantID)
+	}
 	now := time.Now().UTC()
 	sum := evaluate(items, now)
 	sum.NextRecommendedReview = now.AddDate(0, 0, 7)
@@ -184,6 +186,36 @@ func reviewStreak(arr []persistence.ReviewSnapshot) int {
 	return streak
 }
 
+func evaluateItem(it evidence.Item, now time.Time, s *Summary, o *OwnerSummary) {
+	o.Total++
+	if it.Status == "expired" {
+		s.Expired++
+		s.Unresolved++
+		o.Unresolved++
+		s.HealthScore -= 25
+	}
+	if it.Status == "expiring" {
+		s.ExpiringSoon++
+		s.Unresolved++
+		o.Unresolved++
+		s.HealthScore -= 10
+	}
+	if strings.TrimSpace(it.OwnerEmail) == "" && strings.TrimSpace(it.OwnerName) == "" {
+		s.MissingOwner++
+		s.Unresolved++
+		s.HealthScore -= 15
+	}
+	if it.Status == "active" {
+		s.HealthScore += 1
+	}
+	if it.UpdatedAt.Before(now.AddDate(0, 0, -180)) {
+		s.StaleEvidence++
+		s.Unresolved++
+		o.Unresolved++
+		s.HealthScore -= 8
+	}
+}
+
 func evaluate(items []evidence.Item, now time.Time) Summary {
 	s := Summary{HealthScore: 100}
 	owners := map[string]*OwnerSummary{}
@@ -192,34 +224,7 @@ func evaluate(items []evidence.Item, now time.Time) Summary {
 		if _, ok := owners[key]; !ok {
 			owners[key] = &OwnerSummary{OwnerName: it.OwnerName, OwnerEmail: it.OwnerEmail}
 		}
-		o := owners[key]
-		o.Total++
-		if it.Status == "expired" {
-			s.Expired++
-			s.Unresolved++
-			o.Unresolved++
-			s.HealthScore -= 25
-		}
-		if it.Status == "expiring" {
-			s.ExpiringSoon++
-			s.Unresolved++
-			o.Unresolved++
-			s.HealthScore -= 10
-		}
-		if strings.TrimSpace(it.OwnerEmail) == "" && strings.TrimSpace(it.OwnerName) == "" {
-			s.MissingOwner++
-			s.Unresolved++
-			s.HealthScore -= 15
-		}
-		if it.Status == "active" {
-			s.HealthScore += 1
-		}
-		if it.UpdatedAt.Before(now.AddDate(0, 0, -180)) {
-			s.StaleEvidence++
-			s.Unresolved++
-			o.Unresolved++
-			s.HealthScore -= 8
-		}
+		evaluateItem(it, now, &s, owners[key])
 	}
 	if s.HealthScore < 0 {
 		s.HealthScore = 0
@@ -235,7 +240,7 @@ func evaluate(items []evidence.Item, now time.Time) Summary {
 }
 
 func (s *Service) GenerateReviewSnapshot(ctx context.Context, tenantID string) (persistence.ReviewSnapshot, error) {
-	sum, _ := s.BuildSummary(ctx, tenantID)
+	sum, _ := s.BuildSummary(ctx, tenantID, nil)
 	now := time.Now().UTC()
 	snap := persistence.ReviewSnapshot{TenantID: tenantID, GeneratedAt: now, LastReviewedAt: now, NextRecommendedReview: now.AddDate(0, 0, 7), HealthScore: sum.HealthScore, UnresolvedIssues: sum.Unresolved, ExpiredEvidence: sum.Expired, ExpiringEvidence: sum.ExpiringSoon, StaleEvidence: sum.StaleEvidence, MissingOwners: sum.MissingOwner, Disclaimer: disclaimer}
 	_ = s.store.WithLock(func(st *persistence.State) error {

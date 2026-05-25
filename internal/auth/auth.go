@@ -5,10 +5,10 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 )
 
 const (
@@ -18,6 +18,18 @@ const (
 type Context struct {
 	TenantID string
 	UserID   string
+}
+
+var (
+	apiKeysMap  map[string]string
+	apiKeysOnce sync.Once
+)
+
+func getAPIKeys() map[string]string {
+	apiKeysOnce.Do(func() {
+		apiKeysMap = parseAPIKeyMapping(os.Getenv("API_KEYS"))
+	})
+	return apiKeysMap
 }
 
 func FromRequest(r *http.Request) (Context, error) {
@@ -35,7 +47,7 @@ func FromRequest(r *http.Request) (Context, error) {
 	}
 
 	if api := r.Header.Get("X-API-Key"); api != "" {
-		tenant, ok := parseAPIKeyMapping(os.Getenv("API_KEYS"))[api]
+		tenant, ok := getAPIKeys()[api]
 		if !ok {
 			return Context{}, errors.New("invalid api key")
 		}
@@ -93,12 +105,4 @@ func verifySession(token, secret string) (Context, error) {
 		return Context{}, errors.New("invalid session claims")
 	}
 	return Context{TenantID: parts[0], UserID: parts[1]}, nil
-}
-
-func SignSession(tenantID, userID, secret string) string {
-	payload := fmt.Sprintf("%s|%s", tenantID, userID)
-	mac := hmac.New(sha256.New, []byte(secret))
-	_, _ = mac.Write([]byte(payload))
-	sig := base64.StdEncoding.EncodeToString(mac.Sum(nil))
-	return base64.StdEncoding.EncodeToString([]byte(payload + "|" + sig))
 }

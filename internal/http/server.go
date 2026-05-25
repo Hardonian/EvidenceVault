@@ -47,10 +47,21 @@ func method(m string, h http.HandlerFunc) http.HandlerFunc {
 }
 func (s Server) Routes() http.Handler {
 	mux := http.NewServeMux()
+	s.registerSystemRoutes(mux)
+	s.registerAppRoutes(mux)
+	s.registerAPIRoutes(mux)
+	s.registerBillingRoutes(mux)
+	return mux
+}
+
+func (s Server) registerSystemRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/healthz", method(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200); _, _ = w.Write([]byte("ok")) }))
 	mux.HandleFunc("/readyz", method(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200); _, _ = w.Write([]byte("ready")) }))
 	mux.HandleFunc("/version", method(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(s.Version)) }))
 	mux.HandleFunc("/", method(http.MethodGet, s.landing))
+}
+
+func (s Server) registerAppRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/app", method(http.MethodGet, s.app))
 	mux.HandleFunc("/app/evidence", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
@@ -76,14 +87,12 @@ func (s Server) Routes() http.Handler {
 		}
 		http.Error(w, "method not allowed", 405)
 	})
-	mux.HandleFunc("/api/cron/reminders", method(http.MethodPost, s.runReminders))
 	mux.HandleFunc("/app/reviews", method(http.MethodPost, s.generateReview))
 	mux.HandleFunc("/app/export/evidence.csv", method(http.MethodGet, s.exportEvidenceCSV))
 	mux.HandleFunc("/app/export/reviews.csv", method(http.MethodGet, s.exportReviewCSV))
 	mux.HandleFunc("/billing/checkout", method(http.MethodPost, s.checkout))
 	mux.HandleFunc("/billing/portal", method(http.MethodPost, s.portal))
 	mux.HandleFunc("/webhooks/stripe", method(http.MethodPost, s.webhook))
-	return mux
 }
 func (s Server) authContext(w http.ResponseWriter, r *http.Request) (auth.Context, bool) {
 	c, err := auth.FromRequest(r)
@@ -105,7 +114,7 @@ func (s Server) app(w http.ResponseWriter, r *http.Request) {
 	packs, _ := s.Proofpack.List(r.Context(), c.TenantID)
 	sum := operations.Summary{}
 	if s.Operations != nil {
-		sum, _ = s.Operations.BuildSummary(r.Context(), c.TenantID)
+		sum, _ = s.Operations.BuildSummary(r.Context(), c.TenantID, items)
 	}
 	_ = s.Templates.ExecuteTemplate(w, "app.html", map[string]any{"Tenant": c.TenantID, "Items": items, "Proofpacks": packs, "Dashboard": buildDashboardViewModel(items, packs, s.FreeTierLimit, s.PersistenceMode, s.DegradedMode, sum)})
 }
