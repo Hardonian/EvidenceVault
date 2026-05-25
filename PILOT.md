@@ -17,3 +17,7 @@ Teams requiring compliance certification, legal interpretation, or multi-region 
 - Evidence owners assigned.
 - Expiry visibility for next 30 days.
 - Proofpack generated on demand.
+
+## Operational cadence update
+EvidenceVault now includes weekly operational reviews, deterministic health scoring, ownership-based unresolved queues, review snapshot export JSON, and operational history to create recurring operational continuity.
+See `OPERATING_CADENCE.md` for the weekly/monthly/quarterly loop and current manual limitations.

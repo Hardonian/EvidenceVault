@@ -25,6 +25,19 @@
 <ul>
 <li>Total evidence: {{.Dashboard.TotalEvidence}}</li><li>Expiring soon: {{.Dashboard.ExpiringSoon}}</li><li>Expired: {{.Dashboard.Expired}}</li><li>Missing owner: {{.Dashboard.MissingOwner}}</li><li>Total proofpacks: {{.Dashboard.TotalProofpacks}}</li><li>Latest proofpack: {{.Dashboard.LatestProofpackTime}}</li>
 </ul>
+<h2>Operational review</h2>
+<ul>
+<li>Health score: {{.Dashboard.HealthScore}}</li>
+<li>Unresolved issues: {{.Dashboard.UnresolvedIssues}}</li>
+<li>Stale evidence (&gt;180d): {{.Dashboard.StaleEvidence}}</li>
+<li>Last reviewed: {{.Dashboard.LastReviewedAt}}</li>
+<li>Next recommended review: {{.Dashboard.NextRecommendedReview}}</li>
+</ul>
+<form method="post" action="/app/reviews"><button>Generate review snapshot (JSON)</button></form>
+<h3>Cadence recommendations</h3><ul>{{range .Dashboard.Cadence}}<li>{{.}}</li>{{end}}</ul>
+<h3>Evidence by owner</h3><ul>{{range .Dashboard.OwnerSummaries}}<li>{{if .OwnerEmail}}{{.OwnerEmail}}{{else}}unassigned{{end}}: {{.Total}} total, {{.Unresolved}} unresolved</li>{{else}}<li>No owners yet.</li>{{end}}</ul>
+<h3>Recent operational activity</h3><ul>{{range .Dashboard.RecentActivity}}<li>{{.CreatedAt}} - {{.Type}} - {{.Message}}</li>{{else}}<li>No activity yet.</li>{{end}}</ul>
+
 <h2>Create Evidence (JSON via API)</h2>
 <p>POST <code>/app/evidence</code> with X-Tenant-ID and X-User-ID headers. Use statuses: active, expiring, expired, missing, archived.</p>
 <h2>Evidence</h2>

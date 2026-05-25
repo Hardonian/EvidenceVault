@@ -10,6 +10,7 @@ import (
 	"evidencevault/internal/auth"
 	"evidencevault/internal/billing"
 	"evidencevault/internal/evidence"
+	"evidencevault/internal/operations"
 	"evidencevault/internal/proofpack"
 	"evidencevault/internal/reminders"
 	"evidencevault/internal/storage"
@@ -22,6 +23,7 @@ type Server struct {
 	Reminders       *reminders.Service
 	Storage         storage.Client
 	Billing         *billing.Service
+	Operations      *operations.Service
 	Templates       *template.Template
 	CronSecret      string
 	FreeTierLimit   int
@@ -70,6 +72,7 @@ func (s Server) Routes() http.Handler {
 		http.Error(w, "method not allowed", 405)
 	})
 	mux.HandleFunc("/api/cron/reminders", method(http.MethodPost, s.runReminders))
+	mux.HandleFunc("/app/reviews", method(http.MethodPost, s.generateReview))
 	mux.HandleFunc("/billing/checkout", method(http.MethodPost, s.checkout))
 	mux.HandleFunc("/billing/portal", method(http.MethodPost, s.portal))
 	mux.HandleFunc("/webhooks/stripe", method(http.MethodPost, s.webhook))
@@ -93,7 +96,11 @@ func (s Server) app(w http.ResponseWriter, r *http.Request) {
 	}
 	items, _ := s.Evidence.List(r.Context(), c.TenantID)
 	packs, _ := s.Proofpack.List(r.Context(), c.TenantID)
-	_ = s.Templates.ExecuteTemplate(w, "app.html", map[string]any{"Tenant": c.TenantID, "Items": items, "Proofpacks": packs, "Dashboard": buildDashboardViewModel(items, packs, s.FreeTierLimit, s.PersistenceMode, s.DegradedMode)})
+	sum := operations.Summary{}
+	if s.Operations != nil {
+		sum, _ = s.Operations.BuildSummary(r.Context(), c.TenantID)
+	}
+	_ = s.Templates.ExecuteTemplate(w, "app.html", map[string]any{"Tenant": c.TenantID, "Items": items, "Proofpacks": packs, "Dashboard": buildDashboardViewModel(items, packs, s.FreeTierLimit, s.PersistenceMode, s.DegradedMode, sum)})
 }
 func (s Server) listEvidence(w http.ResponseWriter, r *http.Request) {
 	c, ok := s.authContext(w, r)
@@ -154,6 +161,9 @@ func (s Server) uploadEvidence(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
+	if s.Operations != nil {
+		s.Operations.RecordEvent(c.TenantID, "evidence.file.uploaded", "Evidence file uploaded", evidenceID)
+	}
 	_ = json.NewEncoder(w).Encode(map[string]string{"path": loc})
 }
 func (s Server) listProofpacks(w http.ResponseWriter, r *http.Request) {
@@ -177,6 +187,9 @@ func (s Server) createProofpack(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
+	}
+	if s.Operations != nil {
+		s.Operations.RecordEvent(c.TenantID, "proofpack.generated", "Proofpack exported", "")
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(b)
@@ -232,4 +245,17 @@ func (s Server) webhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(200)
+}
+
+func (s Server) generateReview(w http.ResponseWriter, r *http.Request) {
+	c, ok := s.authContext(w, r)
+	if !ok {
+		return
+	}
+	snap, err := s.Operations.GenerateReviewSnapshot(r.Context(), c.TenantID)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	_ = json.NewEncoder(w).Encode(snap)
 }

@@ -5,29 +5,23 @@ import (
 	"time"
 
 	"evidencevault/internal/evidence"
+	"evidencevault/internal/operations"
 )
 
 type DashboardViewModel struct {
-	TotalEvidence       int
-	ExpiringSoon        int
-	Expired             int
-	MissingOwner        int
-	TotalProofpacks     int
-	LatestProofpackTime string
-	Plan                string
-	FreeTierUsage       string
-	PersistenceMode     string
-	DegradedWarnings    []string
+	TotalEvidence, ExpiringSoon, Expired, MissingOwner, TotalProofpacks int
+	LatestProofpackTime, Plan, FreeTierUsage, PersistenceMode           string
+	DegradedWarnings                                                    []string
+	HealthScore, UnresolvedIssues, StaleEvidence                        int
+	LastReviewedAt, NextRecommendedReview                               string
+	OwnerSummaries                                                      []operations.OwnerSummary
+	RecentActivity                                                      []operations.Activity
+	Cadence                                                             []string
 }
 
-func buildDashboardViewModel(items []evidence.Item, proofpacks []map[string]any, freeTierLimit int, persistenceMode string, degradedMode bool) DashboardViewModel {
-	vm := DashboardViewModel{
-		TotalEvidence:   len(items),
-		TotalProofpacks: len(proofpacks),
-		Plan:            "free",
-		FreeTierUsage:   usageText(len(items), freeTierLimit),
-		PersistenceMode: persistenceMode,
-	}
+func buildDashboardViewModel(items []evidence.Item, proofpacks []map[string]any, freeTierLimit int, persistenceMode string, degradedMode bool, summary operations.Summary) DashboardViewModel {
+	vm := DashboardViewModel{TotalEvidence: len(items), TotalProofpacks: len(proofpacks), Plan: "free", FreeTierUsage: usageText(len(items), freeTierLimit), PersistenceMode: persistenceMode,
+		HealthScore: summary.HealthScore, UnresolvedIssues: summary.Unresolved, StaleEvidence: summary.StaleEvidence, OwnerSummaries: summary.Owners, RecentActivity: summary.RecentActivity, Cadence: summary.Cadence}
 	var latest time.Time
 	for _, it := range items {
 		if it.Status == "expiring" {
@@ -50,6 +44,12 @@ func buildDashboardViewModel(items []evidence.Item, proofpacks []map[string]any,
 	} else {
 		vm.LatestProofpackTime = latest.Format(time.RFC3339)
 	}
+	if summary.LastReviewedAt.IsZero() {
+		vm.LastReviewedAt = "not reviewed yet"
+	} else {
+		vm.LastReviewedAt = summary.LastReviewedAt.Format(time.RFC3339)
+	}
+	vm.NextRecommendedReview = summary.NextRecommendedReview.Format(time.RFC3339)
 	if degradedMode {
 		vm.DegradedWarnings = append(vm.DegradedWarnings, "Running in memory mode: data is ephemeral and resets on restart.")
 	}
