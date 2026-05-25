@@ -33,18 +33,12 @@ func (s *Service) Run(ctx context.Context) (int, error) {
 		if it.ExpiryDate.UTC().Before(nowUTC) || it.ExpiryDate.UTC().After(nowUTC.AddDate(0, 0, it.ReminderDaysBefore)) {
 			continue
 		}
-		toProcess = append(toProcess, it)
-	}
-
-	toSend := make([]evidence.Item, 0, len(toProcess))
-	if len(toProcess) > 0 {
-		_ = s.store.WithLock(func(st *persistence.State) error {
-			for _, it := range toProcess {
-				k := it.ID + ":" + today
-				if _, dup := st.ReminderSent[k]; !dup {
-					st.ReminderSent[k] = struct{}{}
-					toSend = append(toSend, it)
-				}
+		k := it.ID + ":" + today
+		dup := false
+		_ = s.store.Write(func(st *persistence.State) error {
+			_, dup = st.ReminderSent[k]
+			if !dup {
+				st.ReminderSent[k] = struct{}{}
 			}
 			return nil
 		})

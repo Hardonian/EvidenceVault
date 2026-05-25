@@ -74,7 +74,7 @@ func Validate(it Item) error {
 }
 func (s *Service) List(_ context.Context, tenantID string) ([]Item, error) {
 	var out []Item
-	_ = s.store.WithLock(func(st *persistence.State) error {
+	_ = s.store.Read(func(st *persistence.State) error {
 		out = append([]Item{}, toItems(st.Evidence[tenantID])...)
 		return nil
 	})
@@ -82,7 +82,7 @@ func (s *Service) List(_ context.Context, tenantID string) ([]Item, error) {
 }
 func (s *Service) Create(_ context.Context, tenantID string, it Item) (string, error) {
 	var idv string
-	err := s.store.WithLock(func(st *persistence.State) error {
+	err := s.store.Write(func(st *persistence.State) error {
 		if len(st.Evidence[tenantID]) >= s.freeTierLimit {
 			return errors.New("free tier limit reached")
 		}
@@ -101,7 +101,7 @@ func (s *Service) Create(_ context.Context, tenantID string, it Item) (string, e
 	return idv, err
 }
 func (s *Service) Update(_ context.Context, tenantID, idv string, it Item) error {
-	return s.store.WithLock(func(st *persistence.State) error {
+	return s.store.Write(func(st *persistence.State) error {
 		it.Status = deriveStatus(it.Status, it.ExpiryDate, it.ReminderDaysBefore, time.Now())
 		if err := Validate(it); err != nil {
 			return err
@@ -122,7 +122,7 @@ func (s *Service) Update(_ context.Context, tenantID, idv string, it Item) error
 	})
 }
 func (s *Service) AttachFile(_ context.Context, tenantID, evidenceID, filePath, contentType string, sizeBytes int64) error {
-	return s.store.WithLock(func(st *persistence.State) error {
+	return s.store.Write(func(st *persistence.State) error {
 		arr := st.Evidence[tenantID]
 		for i := range arr {
 			if arr[i].ID == evidenceID {
@@ -138,7 +138,7 @@ func (s *Service) AttachFile(_ context.Context, tenantID, evidenceID, filePath, 
 }
 func (s *Service) Files(tenantID string) []File {
 	var out []File
-	_ = s.store.WithLock(func(st *persistence.State) error {
+	_ = s.store.Read(func(st *persistence.State) error {
 		out = append([]File{}, toFiles(st.EvidenceFile[tenantID])...)
 		return nil
 	})
@@ -146,7 +146,7 @@ func (s *Service) Files(tenantID string) []File {
 }
 func (s *Service) All() []Item {
 	out := []Item{}
-	_ = s.store.WithLock(func(st *persistence.State) error {
+	_ = s.store.Read(func(st *persistence.State) error {
 		for _, arr := range st.Evidence {
 			out = append(out, toItems(arr)...)
 		}

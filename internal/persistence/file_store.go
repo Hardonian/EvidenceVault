@@ -9,7 +9,7 @@ import (
 )
 
 type FileStore struct {
-	mu    sync.Mutex
+	mu    sync.RWMutex
 	dir   string
 	state State
 }
@@ -32,7 +32,12 @@ func NewFileStore(dir string) (*FileStore, error) {
 	}
 	return fs, nil
 }
-func (f *FileStore) WithLock(fn func(*State) error) error {
+func (f *FileStore) Read(fn func(*State) error) error {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	return fn(&f.state)
+}
+func (f *FileStore) Write(fn func(*State) error) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if err := fn(&f.state); err != nil {

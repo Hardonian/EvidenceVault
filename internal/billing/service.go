@@ -98,7 +98,7 @@ func verifySignature(payload []byte, header, secret string) bool {
 }
 func (s *Service) RecordAndProcessEvent(ctx context.Context, event Event, _ []byte) error {
 	dup := false
-	if err := s.Store.WithLock(func(st *persistence.State) error {
+	if err := s.Store.Write(func(st *persistence.State) error {
 		_, dup = st.StripeEvents[event.ID]
 		if !dup {
 			st.StripeEvents[event.ID] = struct{}{}
