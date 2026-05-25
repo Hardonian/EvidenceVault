@@ -5,18 +5,24 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	// Verify it returns a non-empty string and length is 24
+	// Test basic properties
 	id1 := New()
 	if id1 == "" {
-		t.Error("expected non-empty string, got empty string")
-	}
-	if len(id1) != 24 {
-		t.Errorf("expected string of length 24, got length %d: %q", len(id1), id1)
+		t.Fatal("expected non-empty string, got empty string")
 	}
 
-	// Verify multiple calls return unique values
-	id2 := New()
-	if id1 == id2 {
-		t.Errorf("expected unique IDs, got identical values: %q", id1)
+	if len(id1) != 24 {
+		t.Fatalf("expected length of 24, got %d", len(id1))
+	}
+
+	// Test uniqueness
+	n := 1000
+	seen := make(map[string]bool, n)
+	for i := 0; i < n; i++ {
+		genID := New()
+		if seen[genID] {
+			t.Fatalf("generated duplicate id: %s", genID)
+		}
+		seen[genID] = true
 	}
 }
