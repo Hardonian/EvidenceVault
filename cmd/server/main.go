@@ -13,33 +13,28 @@ import (
 	"evidencevault/internal/audit"
 	"evidencevault/internal/billing"
 	"evidencevault/internal/config"
-	"evidencevault/internal/db"
 	"evidencevault/internal/email"
 	"evidencevault/internal/evidence"
 	httpserver "evidencevault/internal/http"
 	"evidencevault/internal/proofpack"
 	"evidencevault/internal/reminders"
 	"evidencevault/internal/storage"
-	"github.com/joho/godotenv"
-	"github.com/stripe/stripe-go/v78"
 )
 
 func main() {
-	_ = godotenv.Load()
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatal(err)
 	}
-	stripe.Key = cfg.StripeSecretKey
-	ctx := context.Background()
-	database, err := db.Connect(ctx, cfg.DatabaseURL)
-	if err != nil {
-		log.Fatal(err)
+	if cfg.DegradedMode {
+		log.Printf("DATABASE_URL not set: running in local in-memory degraded mode")
 	}
-	defer database.Pool.Close()
+	ctx := context.Background()
 	tmpl := template.Must(template.ParseGlob("templates/*.html"))
-	auditSvc := audit.NewService(database.Pool)
-	srv := &http.Server{Addr: cfg.Addr, Handler: httpserver.Server{Version: cfg.Version, Evidence: evidence.NewService(database.Pool, cfg.FreeTierLimit), Proofpack: proofpack.NewService(database.Pool, auditSvc), Reminders: reminders.NewService(database.Pool, email.LogSender{}, auditSvc), Storage: storage.LocalClient{BasePath: "uploads"}, Billing: &billing.Service{PriceID: cfg.StripePriceID, BaseURL: cfg.BaseURL, WebhookSecret: cfg.StripeWebhookSecret, DB: database.Pool, Audit: auditSvc}, Templates: tmpl, CronSecret: cfg.CronSecret}.Routes()}
+	auditSvc := audit.NewService()
+	ev := evidence.NewService(nil, cfg.FreeTierLimit)
+	billingSvc := &billing.Service{PriceID: cfg.StripePriceID, BaseURL: cfg.BaseURL, WebhookSecret: cfg.StripeWebhookSecret, SecretKey: cfg.StripeSecretKey, Audit: auditSvc}
+	srv := &http.Server{Addr: cfg.Addr, Handler: httpserver.Server{Version: cfg.Version, Evidence: ev, Proofpack: proofpack.NewService(nil, auditSvc, ev), Reminders: reminders.NewService(nil, email.LogSender{}, auditSvc, ev), Storage: storage.LocalClient{BasePath: "uploads"}, Billing: billingSvc, Templates: tmpl, CronSecret: cfg.CronSecret}.Routes()}
 	go func() {
 		log.Printf("listening on %s", cfg.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

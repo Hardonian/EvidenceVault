@@ -2,81 +2,108 @@ package billing
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
-	"time"
+	"net/url"
+	"strings"
 
 	"evidencevault/internal/audit"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/stripe/stripe-go/v78"
-	portalsession "github.com/stripe/stripe-go/v78/billingportal/session"
-	checkoutsession "github.com/stripe/stripe-go/v78/checkout/session"
-	"github.com/stripe/stripe-go/v78/webhook"
 )
 
 var ErrDuplicateEvent = errors.New("duplicate stripe event")
 
+type Event struct{ ID, Type string }
 type Service struct {
-	PriceID, BaseURL, WebhookSecret string
-	DB                              *pgxpool.Pool
-	Audit                           *audit.Service
+	PriceID, BaseURL, WebhookSecret, SecretKey string
+	Audit                                      *audit.Service
+	seen                                       map[string]struct{}
 }
 
-func (s *Service) customerID(ctx context.Context, tenantID string) string {
-	var c string
-	_ = s.DB.QueryRow(ctx, `select stripe_customer_id from stripe_customers where tenant_id=$1`, tenantID).Scan(&c)
-	if c == "" {
-		c = tenantID
+func (s *Service) CheckoutURL(_ context.Context, tenantID string) (string, error) {
+	if s.SecretKey == "" || s.PriceID == "" || s.BaseURL == "" {
+		return "", errors.New("billing unavailable: missing STRIPE_SECRET_KEY, STRIPE_PRICE_ID, or BASE_URL")
 	}
-	return c
+	vals := url.Values{"mode": {"subscription"}, "success_url": {s.BaseURL + "/app?success=1"}, "cancel_url": {s.BaseURL + "/app?canceled=1"}, "client_reference_id": {tenantID}, "line_items[0][price]": {s.PriceID}, "line_items[0][quantity]": {"1"}}
+	return s.postStripe("https://api.stripe.com/v1/checkout/sessions", vals)
 }
-func (s *Service) CheckoutURL(ctx context.Context, tenantID string) (string, error) {
-	customerID := s.customerID(ctx, tenantID)
-	cs, err := checkoutsession.New(&stripe.CheckoutSessionParams{Mode: stripe.String(string(stripe.CheckoutSessionModeSubscription)), SuccessURL: stripe.String(s.BaseURL + "/app?success=1"), CancelURL: stripe.String(s.BaseURL + "/app?canceled=1"), Customer: stripe.String(customerID), LineItems: []*stripe.CheckoutSessionLineItemParams{{Price: stripe.String(s.PriceID), Quantity: stripe.Int64(1)}}})
+func (s *Service) PortalURL(_ context.Context, tenantID string) (string, error) {
+	if s.SecretKey == "" {
+		return "", errors.New("billing unavailable: missing STRIPE_SECRET_KEY")
+	}
+	vals := url.Values{"customer": {tenantID}, "return_url": {s.BaseURL + "/app"}}
+	return s.postStripe("https://api.stripe.com/v1/billing_portal/sessions", vals)
+}
+func (s *Service) postStripe(u string, vals url.Values) (string, error) {
+	req, _ := http.NewRequest(http.MethodPost, u, strings.NewReader(vals.Encode()))
+	req.SetBasicAuth(s.SecretKey, "")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}
-	s.Audit.Log(ctx, tenantID, "", "billing.checkout_created", "billing", customerID, `{}`)
-	return cs.URL, nil
-}
-func (s *Service) PortalURL(ctx context.Context, tenantID string) (string, error) {
-	customerID := s.customerID(ctx, tenantID)
-	ps, err := portalsession.New(&stripe.BillingPortalSessionParams{Customer: stripe.String(customerID), ReturnURL: stripe.String(s.BaseURL + "/app")})
-	if err != nil {
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 300 {
+		return "", fmt.Errorf("stripe error: %s", string(b))
+	}
+	var out struct {
+		URL string `json:"url"`
+	}
+	if err := json.Unmarshal(b, &out); err != nil {
 		return "", err
 	}
-	s.Audit.Log(ctx, tenantID, "", "billing.portal_created", "billing", customerID, `{}`)
-	return ps.URL, nil
+	return out.URL, nil
 }
-func (s *Service) VerifyWebhook(r *http.Request) (*stripe.Event, []byte, error) {
+func (s *Service) VerifyWebhook(r *http.Request) (*Event, []byte, error) {
 	payload, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, nil, err
 	}
-	event, err := webhook.ConstructEvent(payload, r.Header.Get("Stripe-Signature"), s.WebhookSecret)
-	if err != nil {
+	if !verifySignature(payload, r.Header.Get("Stripe-Signature"), s.WebhookSecret) {
+		return nil, payload, errors.New("invalid stripe signature")
+	}
+	var e Event
+	if err := json.Unmarshal(payload, &e); err != nil {
 		return nil, payload, err
 	}
-	return &event, payload, nil
+	return &e, payload, nil
 }
-func (s *Service) RecordAndProcessEvent(ctx context.Context, event stripe.Event, payload []byte) error {
-	_, err := s.DB.Exec(ctx, `insert into stripe_events (stripe_event_id, event_type, payload, status, created_at) values ($1,$2,$3,'received',now())`, event.ID, event.Type, payload)
-	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return ErrDuplicateEvent
+func verifySignature(payload []byte, header, secret string) bool {
+	if secret == "" {
+		return false
+	}
+	parts := strings.Split(header, ",")
+	var t, v1 string
+	for _, p := range parts {
+		kv := strings.SplitN(strings.TrimSpace(p), "=", 2)
+		if len(kv) == 2 && kv[0] == "t" {
+			t = kv[1]
+		} else if len(kv) == 2 && kv[0] == "v1" {
+			v1 = kv[1]
 		}
-		return err
 	}
-	_, err = s.DB.Exec(ctx, `update stripe_events set status='processed', processed_at=$2 where stripe_event_id=$1`, event.ID, time.Now().UTC())
-	if err != nil {
-		_, _ = s.DB.Exec(ctx, `update stripe_events set status='failed' where stripe_event_id=$1`, event.ID)
-		return err
+	if t == "" || v1 == "" {
+		return false
 	}
-	s.Audit.Log(ctx, "", "", "stripe.webhook_processed", "stripe_event", event.ID, `{"type":"`+event.Type+`"}`)
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(t + "." + string(payload)))
+	expected := hex.EncodeToString(mac.Sum(nil))
+	return hmac.Equal([]byte(expected), []byte(v1))
+}
+func (s *Service) RecordAndProcessEvent(ctx context.Context, event Event, _ []byte) error {
+	if s.seen == nil {
+		s.seen = map[string]struct{}{}
+	}
+	if _, ok := s.seen[event.ID]; ok {
+		return ErrDuplicateEvent
+	}
+	s.seen[event.ID] = struct{}{}
+	s.Audit.Log(ctx, "", "", "stripe.webhook_processed", "stripe_event", event.ID, "{\"type\":\""+event.Type+"\"}")
 	return nil
 }
-func EventObjectRaw(e stripe.Event) string { b, _ := json.Marshal(e.Data.Object); return string(b) }
