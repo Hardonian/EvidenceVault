@@ -8,19 +8,27 @@ import (
 	"evidencevault/internal/audit"
 	"evidencevault/internal/evidence"
 	"evidencevault/internal/id"
+	"evidencevault/internal/persistence"
 )
 
 type Service struct {
 	evidence *evidence.Service
 	audit    *audit.Service
-	packs    map[string][]map[string]any
+	store    persistence.Store
 }
 
-func NewService(_ any, auditSvc *audit.Service, ev *evidence.Service) *Service {
-	return &Service{evidence: ev, audit: auditSvc, packs: map[string][]map[string]any{}}
+func NewService(store persistence.Store, auditSvc *audit.Service, ev *evidence.Service) *Service {
+	return &Service{store: store, evidence: ev, audit: auditSvc}
 }
 func (s *Service) List(_ context.Context, tenantID string) ([]map[string]any, error) {
-	return append([]map[string]any{}, s.packs[tenantID]...), nil
+	out := []map[string]any{}
+	_ = s.store.WithLock(func(st *persistence.State) error {
+		for _, p := range st.Proofpacks[tenantID] {
+			out = append(out, map[string]any{"id": p.ID, "created_at": p.CreatedAt})
+		}
+		return nil
+	})
+	return out, nil
 }
 func (s *Service) Export(ctx context.Context, tenantID, version string) ([]byte, error) {
 	items, _ := s.evidence.List(ctx, tenantID)
@@ -30,7 +38,10 @@ func (s *Service) Export(ctx context.Context, tenantID, version string) ([]byte,
 		return nil, err
 	}
 	pid := id.New()
-	s.packs[tenantID] = append([]map[string]any{{"id": pid, "created_at": time.Now().UTC()}}, s.packs[tenantID]...)
+	_ = s.store.WithLock(func(st *persistence.State) error {
+		st.Proofpacks[tenantID] = append([]persistence.ProofpackMeta{{ID: pid, CreatedAt: time.Now().UTC()}}, st.Proofpacks[tenantID]...)
+		return nil
+	})
 	s.audit.Log(ctx, tenantID, "", "proofpack.generated", "proofpack", pid, "{}")
 	return b, nil
 }

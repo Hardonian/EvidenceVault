@@ -7,13 +7,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"evidencevault/internal/audit"
+	"evidencevault/internal/persistence"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
-
-	"evidencevault/internal/audit"
 )
 
 var ErrDuplicateEvent = errors.New("duplicate stripe event")
@@ -22,7 +22,7 @@ type Event struct{ ID, Type string }
 type Service struct {
 	PriceID, BaseURL, WebhookSecret, SecretKey string
 	Audit                                      *audit.Service
-	seen                                       map[string]struct{}
+	Store                                      persistence.Store
 }
 
 func (s *Service) CheckoutURL(_ context.Context, tenantID string) (string, error) {
@@ -97,13 +97,19 @@ func verifySignature(payload []byte, header, secret string) bool {
 	return hmac.Equal([]byte(expected), []byte(v1))
 }
 func (s *Service) RecordAndProcessEvent(ctx context.Context, event Event, _ []byte) error {
-	if s.seen == nil {
-		s.seen = map[string]struct{}{}
+	dup := false
+	if err := s.Store.WithLock(func(st *persistence.State) error {
+		_, dup = st.StripeEvents[event.ID]
+		if !dup {
+			st.StripeEvents[event.ID] = struct{}{}
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
-	if _, ok := s.seen[event.ID]; ok {
+	if dup {
 		return ErrDuplicateEvent
 	}
-	s.seen[event.ID] = struct{}{}
 	s.Audit.Log(ctx, "", "", "stripe.webhook_processed", "stripe_event", event.ID, "{\"type\":\""+event.Type+"\"}")
 	return nil
 }

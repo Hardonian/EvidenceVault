@@ -7,17 +7,18 @@ import (
 	"evidencevault/internal/audit"
 	"evidencevault/internal/email"
 	"evidencevault/internal/evidence"
+	"evidencevault/internal/persistence"
 )
 
 type Service struct {
 	evidence *evidence.Service
 	email    email.Sender
 	audit    *audit.Service
-	sent     map[string]struct{}
+	store    persistence.Store
 }
 
-func NewService(_ any, sender email.Sender, auditSvc *audit.Service, ev *evidence.Service) *Service {
-	return &Service{evidence: ev, email: sender, audit: auditSvc, sent: map[string]struct{}{}}
+func NewService(store persistence.Store, sender email.Sender, auditSvc *audit.Service, ev *evidence.Service) *Service {
+	return &Service{store: store, evidence: ev, email: sender, audit: auditSvc}
 }
 func (s *Service) Run(ctx context.Context) (int, error) {
 	items := s.evidence.All()
@@ -31,7 +32,15 @@ func (s *Service) Run(ctx context.Context) (int, error) {
 			continue
 		}
 		k := it.ID + ":" + today
-		if _, ok := s.sent[k]; ok {
+		dup := false
+		_ = s.store.WithLock(func(st *persistence.State) error {
+			_, dup = st.ReminderSent[k]
+			if !dup {
+				st.ReminderSent[k] = struct{}{}
+			}
+			return nil
+		})
+		if dup {
 			continue
 		}
 		status := "sent"
@@ -40,7 +49,6 @@ func (s *Service) Run(ctx context.Context) (int, error) {
 		} else {
 			sent++
 		}
-		s.sent[k] = struct{}{}
 		s.audit.Log(ctx, it.TenantID, "", "reminder.sent", "evidence_item", it.ID, "{\"channel\":\"email\",\"status\":\""+status+"\"}")
 	}
 	return sent, nil
