@@ -5,3 +5,8 @@ Start in demo mode (`DEMO_MODE=true`) and tenant `pilot-demo`.
 - Show recent activity + proofpack history.
 - Create one template record to show instant activation.
 - Explain weekly review loop and retention: score + accountability improve each week.
+
+## Founder demo refinement
+- Show activation checklist progression and current maturity stage.
+- Walk through attention-needed drift warnings and unresolved trend.
+- Show CSV exports for trust portability.

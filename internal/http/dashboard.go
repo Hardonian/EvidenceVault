@@ -29,9 +29,18 @@ type DashboardViewModel struct {
 	Onboarding                                                          bool
 	StarterTemplates                                                    []TemplateCard
 	PriorityQueue                                                       []PriorityItem
+	ActivationCompletionPercent                                         int
+	ActivationChecklist                                                 []operations.MilestoneState
+	PilotMaturityStage                                                  string
+	Friction, UpgradeSignals                                            []string
 }
 
-func calculateItemCounts(items []evidence.Item) (expiringSoon, expired, missingOwner int) {
+func buildDashboardViewModel(items []evidence.Item, proofpacks []map[string]any, freeTierLimit int, persistenceMode string, degradedMode bool, summary operations.Summary) DashboardViewModel {
+	vm := DashboardViewModel{TotalEvidence: len(items), TotalProofpacks: len(proofpacks), Plan: "free", FreeTierUsage: usageText(len(items), freeTierLimit), PersistenceMode: persistenceMode,
+		HealthScore: summary.HealthScore, UnresolvedIssues: summary.Unresolved, StaleEvidence: summary.StaleEvidence, OwnerSummaries: summary.Owners, RecentActivity: summary.RecentActivity, Cadence: summary.Cadence,
+		PreviousHealthScore: summary.PreviousHealthScore, HealthDelta: summary.HealthDelta, UnresolvedDelta: summary.UnresolvedDelta, ReviewCompletionStreak: summary.ReviewCompletionStreak, DaysSinceLastReview: summary.DaysSinceLastReview,
+		ActivationCompletionPercent: summary.ActivationCompletionPercent, ActivationChecklist: summary.ActivationChecklist, PilotMaturityStage: summary.PilotMaturityStage, Friction: summary.Friction, UpgradeSignals: summary.UpgradeSignals}
+	var latest time.Time
 	for _, it := range items {
 		if it.Status == "expiring" {
 			expiringSoon++
