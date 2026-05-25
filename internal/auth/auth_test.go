@@ -7,97 +7,124 @@ import (
 )
 
 func TestFromRequest(t *testing.T) {
-	sessionSecret := "test-secret"
-	validToken := SignSession("cookie-tenant", "cookie-user", sessionSecret)
+	validSecret := "super-secret-key-that-is-long-enough"
+	validCookieToken := SignSession("tenant-123", "user-456", validSecret)
 
 	tests := []struct {
-		name           string
-		envVars        map[string]string
-		setupRequest   func(*http.Request)
-		expectedCtx    Context
-		expectedErrStr string
+		name          string
+		env           map[string]string
+		setupRequest  func(*http.Request)
+		wantCtx       Context
+		wantErrString string
 	}{
 		{
-			name: "development environment defaults",
-			envVars: map[string]string{
+			name: "dev env - default headers",
+			env: map[string]string{
 				"APP_ENV": "development",
 			},
 			setupRequest: func(r *http.Request) {},
-			expectedCtx:  Context{TenantID: "demo-tenant", UserID: "dev-user"},
+			wantCtx: Context{
+				TenantID: "demo-tenant",
+				UserID:   "dev-user",
+			},
 		},
 		{
-			name: "development environment with headers",
-			envVars: map[string]string{
+			name: "dev env - custom headers",
+			env: map[string]string{
 				"APP_ENV": "development",
 			},
 			setupRequest: func(r *http.Request) {
 				r.Header.Set("X-Tenant-ID", "custom-tenant")
 				r.Header.Set("X-User-ID", "custom-user")
 			},
-			expectedCtx: Context{TenantID: "custom-tenant", UserID: "custom-user"},
+			wantCtx: Context{
+				TenantID: "custom-tenant",
+				UserID:   "custom-user",
+			},
 		},
 		{
-			name: "API key valid",
-			envVars: map[string]string{
+			name: "prod env - valid api key",
+			env: map[string]string{
 				"API_KEYS": "key1:tenant1,key2:tenant2",
 			},
 			setupRequest: func(r *http.Request) {
 				r.Header.Set("X-API-Key", "key2")
 			},
-			expectedCtx: Context{TenantID: "tenant2", UserID: "api-key"},
+			wantCtx: Context{
+				TenantID: "tenant2",
+				UserID:   "api-key",
+			},
 		},
 		{
-			name: "API key invalid",
-			envVars: map[string]string{
+			name: "prod env - invalid api key",
+			env: map[string]string{
 				"API_KEYS": "key1:tenant1",
 			},
 			setupRequest: func(r *http.Request) {
-				r.Header.Set("X-API-Key", "invalid-key")
+				r.Header.Set("X-API-Key", "key2")
 			},
-			expectedErrStr: "invalid api key",
+			wantErrString: "invalid api key",
 		},
 		{
-			name:           "missing auth (no cookie, no api key, not development)",
-			envVars:        map[string]string{},
-			setupRequest:   func(r *http.Request) {},
-			expectedErrStr: "missing auth",
-		},
-		{
-			name:    "session auth unavailable (no secret)",
-			envVars: map[string]string{},
+			name: "prod env - missing auth completely",
+			env:  map[string]string{},
 			setupRequest: func(r *http.Request) {
-				r.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "some-value"})
 			},
-			expectedErrStr: "session auth unavailable",
+			wantErrString: "missing auth",
 		},
 		{
-			name: "invalid session signature",
-			envVars: map[string]string{
-				"SESSION_SECRET": sessionSecret,
+			name: "prod env - valid session cookie",
+			env: map[string]string{
+				"SESSION_SECRET": validSecret,
 			},
 			setupRequest: func(r *http.Request) {
-				r.AddCookie(&http.Cookie{Name: sessionCookieName, Value: SignSession("t1", "u1", "wrong-secret")})
+				r.AddCookie(&http.Cookie{
+					Name:  sessionCookieName,
+					Value: validCookieToken,
+				})
 			},
-			expectedErrStr: "invalid session signature",
+			wantCtx: Context{
+				TenantID: "tenant-123",
+				UserID:   "user-456",
+			},
 		},
 		{
-			name: "valid session",
-			envVars: map[string]string{
-				"SESSION_SECRET": sessionSecret,
+			name: "prod env - valid session cookie, missing secret",
+			env: map[string]string{
+				"SESSION_SECRET": "",
 			},
 			setupRequest: func(r *http.Request) {
-				r.AddCookie(&http.Cookie{Name: sessionCookieName, Value: validToken})
+				r.AddCookie(&http.Cookie{
+					Name:  sessionCookieName,
+					Value: validCookieToken,
+				})
 			},
-			expectedCtx: Context{TenantID: "cookie-tenant", UserID: "cookie-user"},
+			wantErrString: "session auth unavailable",
+		},
+		{
+			name: "prod env - invalid session cookie",
+			env: map[string]string{
+				"SESSION_SECRET": validSecret,
+			},
+			setupRequest: func(r *http.Request) {
+				r.AddCookie(&http.Cookie{
+					Name:  sessionCookieName,
+					Value: "invalid-token",
+				})
+			},
+			wantErrString: "invalid session",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Clear environment variables that might affect the test
 			t.Setenv("APP_ENV", "")
 			t.Setenv("API_KEYS", "")
 			t.Setenv("SESSION_SECRET", "")
-			for k, v := range tt.envVars {
+
+			// Set the environment variables for this test case
+			for k, v := range tt.env {
 				t.Setenv(k, v)
 			}
 
@@ -107,20 +134,23 @@ func TestFromRequest(t *testing.T) {
 			}
 
 			ctx, err := FromRequest(req)
-			if tt.expectedErrStr != "" {
+
+			if tt.wantErrString != "" {
 				if err == nil {
-					t.Fatalf("expected error containing %q, got nil", tt.expectedErrStr)
+					t.Fatalf("expected error containing %q, got nil", tt.wantErrString)
 				}
-				if err.Error() != tt.expectedErrStr {
-					t.Errorf("expected error %q, got %q", tt.expectedErrStr, err.Error())
+				if err.Error() != tt.wantErrString {
+					t.Errorf("expected error %q, got %q", tt.wantErrString, err.Error())
 				}
-			} else {
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
-				if ctx != tt.expectedCtx {
-					t.Errorf("expected context %+v, got %+v", tt.expectedCtx, ctx)
-				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if ctx != tt.wantCtx {
+				t.Errorf("expected context %+v, got %+v", tt.wantCtx, ctx)
 			}
 		})
 	}
