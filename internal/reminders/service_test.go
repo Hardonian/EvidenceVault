@@ -40,7 +40,6 @@ func setupTest(t *testing.T) (*Service, *MockEmailSender, persistence.Store, *ev
 	return svc, mockEmail, store, evSvc, auditSvc
 }
 
-
 func TestService_Run(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now().UTC()
