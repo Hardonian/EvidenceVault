@@ -17,7 +17,7 @@ func TestFromRequest(t *testing.T) {
 	}{
 		// Development mode tests
 		{
-			name: "development mode - no headers",
+			name:         "development mode - no headers",
 			setupRequest: func(r *http.Request) {},
 			setupEnv: func(t *testing.T) {
 				t.Setenv("APP_ENV", "development")
@@ -60,9 +60,9 @@ func TestFromRequest(t *testing.T) {
 
 		// Session Cookie tests
 		{
-			name: "production mode - missing auth",
-			setupRequest: func(r *http.Request) {},
-			setupEnv: func(t *testing.T) {},
+			name:          "production mode - missing auth",
+			setupRequest:  func(r *http.Request) {},
+			setupEnv:      func(t *testing.T) {},
 			expectedError: "missing auth",
 		},
 		{
