@@ -49,6 +49,15 @@ type OperationalEvent struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type ActivationMilestones struct {
+	FirstEvidenceCreatedAt    *time.Time `json:"first_evidence_created_at,omitempty"`
+	FirstFileUploadedAt       *time.Time `json:"first_file_uploaded_at,omitempty"`
+	FirstReminderRunAt        *time.Time `json:"first_reminder_run_at,omitempty"`
+	FirstProofpackGeneratedAt *time.Time `json:"first_proofpack_generated_at,omitempty"`
+	FirstOperationalReviewAt  *time.Time `json:"first_operational_review_at,omitempty"`
+	SecondWeeklyReviewAt      *time.Time `json:"second_weekly_review_at,omitempty"`
+}
+
 type State struct {
 	Tenants           map[string]string
 	Evidence          map[string][]EvidenceItem
@@ -59,6 +68,7 @@ type State struct {
 	StripeEvents      map[string]struct{}
 	ReviewSnapshots   map[string][]ReviewSnapshot
 	OperationalEvents map[string][]OperationalEvent
+	Activation        map[string]ActivationMilestones
 }
 
 type Store interface {
@@ -82,7 +92,7 @@ func (m *MemoryStore) Write(fn func(*State) error) error {
 	return fn(&m.state)
 }
 func emptyState() State {
-	return State{Tenants: map[string]string{}, Evidence: map[string][]EvidenceItem{}, EvidenceFile: map[string][]EvidenceFile{}, ReminderSent: map[string]struct{}{}, Proofpacks: map[string][]ProofpackMeta{}, AuditLogs: []AuditEntry{}, StripeEvents: map[string]struct{}{}, ReviewSnapshots: map[string][]ReviewSnapshot{}, OperationalEvents: map[string][]OperationalEvent{}}
+	return State{Tenants: map[string]string{}, Evidence: map[string][]EvidenceItem{}, EvidenceFile: map[string][]EvidenceFile{}, ReminderSent: map[string]struct{}{}, Proofpacks: map[string][]ProofpackMeta{}, AuditLogs: []AuditEntry{}, StripeEvents: map[string]struct{}{}, ReviewSnapshots: map[string][]ReviewSnapshot{}, OperationalEvents: map[string][]OperationalEvent{}, Activation: map[string]ActivationMilestones{}}
 }
 
 var ErrDataDirRequired = errors.New("DATA_DIR is required for file persistence mode")

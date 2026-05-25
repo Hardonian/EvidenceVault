@@ -24,11 +24,13 @@ func (s *Service) Run(ctx context.Context) (int, error) {
 	items := s.evidence.All()
 	sent := 0
 	today := time.Now().UTC().Format("2006-01-02")
+	toProcess := make([]evidence.Item, 0, len(items))
+	nowUTC := time.Now().UTC()
 	for _, it := range items {
 		if it.OwnerEmail == "" || it.ExpiryDate == nil {
 			continue
 		}
-		if it.ExpiryDate.UTC().Before(time.Now().UTC()) || it.ExpiryDate.UTC().After(time.Now().UTC().AddDate(0, 0, it.ReminderDaysBefore)) {
+		if it.ExpiryDate.UTC().Before(nowUTC) || it.ExpiryDate.UTC().After(nowUTC.AddDate(0, 0, it.ReminderDaysBefore)) {
 			continue
 		}
 		k := it.ID + ":" + today
@@ -40,9 +42,9 @@ func (s *Service) Run(ctx context.Context) (int, error) {
 			}
 			return nil
 		})
-		if dup {
-			continue
-		}
+	}
+
+	for _, it := range toSend {
 		status := "sent"
 		if err := s.email.Send(it.OwnerEmail, "Evidence reminder: "+it.Title, "This evidence is expiring soon."); err != nil {
 			status = "failed"

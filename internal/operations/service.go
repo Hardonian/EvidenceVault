@@ -30,6 +30,16 @@ type Summary struct {
 	RecentActivity                                                              []Activity
 	ProofpackHistory                                                            []persistence.ProofpackMeta
 	Cadence                                                                     []string
+	ActivationCompletionPercent                                                 int
+	ActivationChecklist                                                         []MilestoneState
+	PilotMaturityStage                                                          string
+	DaysSinceLastUpload, DaysSinceLastProofpack                                 int
+	Friction                                                                    []string
+	UpgradeSignals                                                              []string
+}
+type MilestoneState struct {
+	Key, Label string
+	ReachedAt  *time.Time
 }
 
 type Service struct {
@@ -41,8 +51,10 @@ func NewService(store persistence.Store, ev *evidence.Service) *Service {
 	return &Service{store: store, evidence: ev}
 }
 
-func (s *Service) BuildSummary(ctx context.Context, tenantID string) (Summary, error) {
-	items, _ := s.evidence.List(ctx, tenantID)
+func (s *Service) BuildSummary(ctx context.Context, tenantID string, items []evidence.Item) (Summary, error) {
+	if items == nil {
+		items, _ = s.evidence.List(ctx, tenantID)
+	}
 	now := time.Now().UTC()
 	sum := evaluate(items, now)
 	sum.NextRecommendedReview = now.AddDate(0, 0, 7)
@@ -72,10 +84,81 @@ func (s *Service) BuildSummary(ctx context.Context, tenantID string) (Summary, e
 		}
 		return nil
 	})
+	done := 0
+	for _, c := range sum.ActivationChecklist {
+		if c.ReachedAt != nil {
+			done++
+		}
+	}
+	sum.ActivationCompletionPercent = done * 100 / len(sum.ActivationChecklist)
+	sum.PilotMaturityStage = deriveStage(sum, len(items))
+	sum.Friction = frictionIndicators(sum, now)
+	sum.UpgradeSignals = upgradeSignals(sum, len(items))
 	if !sum.LastReviewedAt.IsZero() {
 		sum.DaysSinceLastReview = int(now.Sub(sum.LastReviewedAt).Hours() / 24)
 	}
 	return sum, nil
+}
+
+func deriveStage(sum Summary, totalEvidence int) string {
+	has := func(key string) bool {
+		for _, m := range sum.ActivationChecklist {
+			if m.Key == key {
+				return m.ReachedAt != nil
+			}
+		}
+		return false
+	}
+	if sum.HealthScore >= 75 && totalEvidence >= 12 && len(sum.Owners) > 1 && len(sum.ProofpackHistory) >= 3 && sum.ReviewCompletionStreak >= 3 {
+		return "expansion-ready"
+	}
+	if has("second_weekly_review") {
+		return "recurring"
+	}
+	if has("first_proofpack_generated") && has("first_operational_review") {
+		return "operational"
+	}
+	if has("first_evidence_created") && has("first_file_uploaded") {
+		return "activated"
+	}
+	return "exploring"
+}
+
+func frictionIndicators(sum Summary, now time.Time) []string {
+	var out []string
+	if sum.UnresolvedDelta > 0 {
+		out = append(out, "Unresolved issues are trending upward")
+	}
+	if sum.ExpiringSoon+sum.Expired > 0 {
+		out = append(out, "Overdue or expiring evidence needs action")
+	}
+	if sum.MissingOwner > 0 {
+		out = append(out, "Ownerless evidence is creating accountability gaps")
+	}
+	if !sum.LastActivityAt.IsZero() && int(now.Sub(sum.LastActivityAt).Hours()/24) > 10 {
+		out = append(out, "Operational drift warning: activity gap exceeds 10 days")
+	}
+	if sum.ReviewCompletionStreak < 2 && sum.DaysSinceLastReview > 9 {
+		out = append(out, "Review streak break detected")
+	}
+	return out
+}
+
+func upgradeSignals(sum Summary, totalEvidence int) []string {
+	var out []string
+	if totalEvidence >= 20 {
+		out = append(out, "You may outgrow file mode as evidence volume grows")
+	}
+	if len(sum.Owners) >= 2 {
+		out = append(out, "Multi-user workflow emerging")
+	}
+	if sum.ReviewCompletionStreak >= 2 {
+		out = append(out, "Recurring reviews established")
+	}
+	if len(sum.ProofpackHistory) >= 4 {
+		out = append(out, "History depth increasing")
+	}
+	return out
 }
 
 func reviewStreak(arr []persistence.ReviewSnapshot) int {
@@ -94,6 +177,36 @@ func reviewStreak(arr []persistence.ReviewSnapshot) int {
 	return streak
 }
 
+func evaluateItem(it evidence.Item, now time.Time, s *Summary, o *OwnerSummary) {
+	o.Total++
+	if it.Status == "expired" {
+		s.Expired++
+		s.Unresolved++
+		o.Unresolved++
+		s.HealthScore -= 25
+	}
+	if it.Status == "expiring" {
+		s.ExpiringSoon++
+		s.Unresolved++
+		o.Unresolved++
+		s.HealthScore -= 10
+	}
+	if strings.TrimSpace(it.OwnerEmail) == "" && strings.TrimSpace(it.OwnerName) == "" {
+		s.MissingOwner++
+		s.Unresolved++
+		s.HealthScore -= 15
+	}
+	if it.Status == "active" {
+		s.HealthScore += 1
+	}
+	if it.UpdatedAt.Before(now.AddDate(0, 0, -180)) {
+		s.StaleEvidence++
+		s.Unresolved++
+		o.Unresolved++
+		s.HealthScore -= 8
+	}
+}
+
 func evaluate(items []evidence.Item, now time.Time) Summary {
 	s := Summary{HealthScore: 100}
 	owners := map[string]*OwnerSummary{}
@@ -102,34 +215,7 @@ func evaluate(items []evidence.Item, now time.Time) Summary {
 		if _, ok := owners[key]; !ok {
 			owners[key] = &OwnerSummary{OwnerName: it.OwnerName, OwnerEmail: it.OwnerEmail}
 		}
-		o := owners[key]
-		o.Total++
-		if it.Status == "expired" {
-			s.Expired++
-			s.Unresolved++
-			o.Unresolved++
-			s.HealthScore -= 25
-		}
-		if it.Status == "expiring" {
-			s.ExpiringSoon++
-			s.Unresolved++
-			o.Unresolved++
-			s.HealthScore -= 10
-		}
-		if strings.TrimSpace(it.OwnerEmail) == "" && strings.TrimSpace(it.OwnerName) == "" {
-			s.MissingOwner++
-			s.Unresolved++
-			s.HealthScore -= 15
-		}
-		if it.Status == "active" {
-			s.HealthScore += 1
-		}
-		if it.UpdatedAt.Before(now.AddDate(0, 0, -180)) {
-			s.StaleEvidence++
-			s.Unresolved++
-			o.Unresolved++
-			s.HealthScore -= 8
-		}
+		evaluateItem(it, now, &s, owners[key])
 	}
 	if s.HealthScore < 0 {
 		s.HealthScore = 0
@@ -145,14 +231,14 @@ func evaluate(items []evidence.Item, now time.Time) Summary {
 }
 
 func (s *Service) GenerateReviewSnapshot(ctx context.Context, tenantID string) (persistence.ReviewSnapshot, error) {
-	sum, _ := s.BuildSummary(ctx, tenantID)
+	sum, _ := s.BuildSummary(ctx, tenantID, nil)
 	now := time.Now().UTC()
 	snap := persistence.ReviewSnapshot{TenantID: tenantID, GeneratedAt: now, LastReviewedAt: now, NextRecommendedReview: now.AddDate(0, 0, 7), HealthScore: sum.HealthScore, UnresolvedIssues: sum.Unresolved, ExpiredEvidence: sum.Expired, ExpiringEvidence: sum.ExpiringSoon, StaleEvidence: sum.StaleEvidence, MissingOwners: sum.MissingOwner, Disclaimer: disclaimer}
 	_ = s.store.Write(func(st *persistence.State) error {
 		st.ReviewSnapshots[tenantID] = append([]persistence.ReviewSnapshot{snap}, st.ReviewSnapshots[tenantID]...)
-		st.OperationalEvents[tenantID] = append([]persistence.OperationalEvent{{TenantID: tenantID, Type: "review.snapshot.generated", Message: "Operational review snapshot generated", CreatedAt: now}}, st.OperationalEvents[tenantID]...)
 		return nil
 	})
+	s.RecordEvent(tenantID, "review.snapshot.generated", "Operational review snapshot generated", "")
 	return snap, nil
 }
 

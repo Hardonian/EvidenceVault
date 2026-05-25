@@ -29,57 +29,114 @@ type DashboardViewModel struct {
 	Onboarding                                                          bool
 	StarterTemplates                                                    []TemplateCard
 	PriorityQueue                                                       []PriorityItem
+	ActivationCompletionPercent                                         int
+	ActivationChecklist                                                 []operations.MilestoneState
+	PilotMaturityStage                                                  string
+	Friction, UpgradeSignals                                            []string
 }
 
 func buildDashboardViewModel(items []evidence.Item, proofpacks []map[string]any, freeTierLimit int, persistenceMode string, degradedMode bool, summary operations.Summary) DashboardViewModel {
 	vm := DashboardViewModel{TotalEvidence: len(items), TotalProofpacks: len(proofpacks), Plan: "free", FreeTierUsage: usageText(len(items), freeTierLimit), PersistenceMode: persistenceMode,
 		HealthScore: summary.HealthScore, UnresolvedIssues: summary.Unresolved, StaleEvidence: summary.StaleEvidence, OwnerSummaries: summary.Owners, RecentActivity: summary.RecentActivity, Cadence: summary.Cadence,
-		PreviousHealthScore: summary.PreviousHealthScore, HealthDelta: summary.HealthDelta, UnresolvedDelta: summary.UnresolvedDelta, ReviewCompletionStreak: summary.ReviewCompletionStreak, DaysSinceLastReview: summary.DaysSinceLastReview}
+		PreviousHealthScore: summary.PreviousHealthScore, HealthDelta: summary.HealthDelta, UnresolvedDelta: summary.UnresolvedDelta, ReviewCompletionStreak: summary.ReviewCompletionStreak, DaysSinceLastReview: summary.DaysSinceLastReview,
+		ActivationCompletionPercent: summary.ActivationCompletionPercent, ActivationChecklist: summary.ActivationChecklist, PilotMaturityStage: summary.PilotMaturityStage, Friction: summary.Friction, UpgradeSignals: summary.UpgradeSignals}
 	var latest time.Time
 	for _, it := range items {
 		if it.Status == "expiring" {
-			vm.ExpiringSoon++
+			expiringSoon++
 		}
 		if it.Status == "expired" {
-			vm.Expired++
+			expired++
 		}
 		if it.OwnerEmail == "" && it.OwnerName == "" {
-			vm.MissingOwner++
+			missingOwner++
 		}
 	}
+	return
+}
+
+func findLatestProofpackTime(proofpacks []map[string]any) string {
+	var latest time.Time
 	for _, p := range proofpacks {
 		if createdAt, ok := p["created_at"].(time.Time); ok && createdAt.After(latest) {
 			latest = createdAt
 		}
 	}
-	if latest.IsZero() {
-		vm.LatestProofpackTime = "not generated yet"
-	} else {
-		vm.LatestProofpackTime = latest.Format(time.RFC3339)
+	return formatTimeOrDefault(latest, "not generated yet")
+}
+
+func formatTimeOrDefault(t time.Time, defaultStr string) string {
+	if t.IsZero() {
+		return defaultStr
 	}
-	if summary.LastReviewedAt.IsZero() {
-		vm.LastReviewedAt = "not reviewed yet"
-	} else {
-		vm.LastReviewedAt = summary.LastReviewedAt.Format(time.RFC3339)
-	}
-	vm.NextRecommendedReview = summary.NextRecommendedReview.Format(time.RFC3339)
-	if summary.LastActivityAt.IsZero() {
-		vm.LastActivityAt = "no activity yet"
-	} else {
-		vm.LastActivityAt = summary.LastActivityAt.Format(time.RFC3339)
-	}
+	return t.Format(time.RFC3339)
+}
+
+func buildDegradedWarnings(degradedMode bool, persistenceMode string) []string {
+	var warnings []string
 	if degradedMode {
-		vm.DegradedWarnings = append(vm.DegradedWarnings, "Running in memory mode: data is ephemeral and resets on restart.")
+		warnings = append(warnings, "Running in memory mode: data is ephemeral and resets on restart.")
 	}
 	if persistenceMode == "file" {
-		vm.DegradedWarnings = append(vm.DegradedWarnings, "File mode is durable for pilot use but is single-node storage.")
+		warnings = append(warnings, "File mode is durable for pilot use but is single-node storage.")
 	}
-	vm.Onboarding = len(items) == 0
+	return warnings
+}
+
+func buildStarterTemplates() []TemplateCard {
+	var templates []TemplateCard
 	for _, t := range evidence.StarterTemplates(time.Now().UTC()) {
-		vm.StarterTemplates = append(vm.StarterTemplates, TemplateCard{Key: t.Key, Name: t.Name, Description: t.Description})
+		templates = append(templates, TemplateCard{Key: t.Key, Name: t.Name, Description: t.Description})
 	}
-	vm.PriorityQueue = []PriorityItem{{"Expired evidence", vm.Expired}, {"Missing owners", vm.MissingOwner}, {"Expiring soon", vm.ExpiringSoon}, {"Stale evidence", vm.StaleEvidence}, {"Recent uploads/proofpacks", len(vm.RecentActivity) + vm.TotalProofpacks}}
-	sort.SliceStable(vm.PriorityQueue, func(i, j int) bool { return i < j })
+	return templates
+}
+
+func buildPriorityQueue(expired, missingOwner, expiringSoon, staleEvidence, recentActivityCount, totalProofpacks int) []PriorityItem {
+	queue := []PriorityItem{
+		{"Expired evidence", expired},
+		{"Missing owners", missingOwner},
+		{"Expiring soon", expiringSoon},
+		{"Stale evidence", staleEvidence},
+		{"Recent uploads/proofpacks", recentActivityCount + totalProofpacks},
+	}
+
+	sort.SliceStable(queue, func(i, j int) bool { return i < j })
+	return queue
+}
+
+func buildDashboardViewModel(items []evidence.Item, proofpacks []map[string]any, freeTierLimit int, persistenceMode string, degradedMode bool, summary operations.Summary) DashboardViewModel {
+	expiringSoon, expired, missingOwner := calculateItemCounts(items)
+
+	vm := DashboardViewModel{
+		TotalEvidence:          len(items),
+		TotalProofpacks:        len(proofpacks),
+		Plan:                   "free",
+		FreeTierUsage:          usageText(len(items), freeTierLimit),
+		PersistenceMode:        persistenceMode,
+		HealthScore:            summary.HealthScore,
+		UnresolvedIssues:       summary.Unresolved,
+		StaleEvidence:          summary.StaleEvidence,
+		OwnerSummaries:         summary.Owners,
+		RecentActivity:         summary.RecentActivity,
+		Cadence:                summary.Cadence,
+		PreviousHealthScore:    summary.PreviousHealthScore,
+		HealthDelta:            summary.HealthDelta,
+		UnresolvedDelta:        summary.UnresolvedDelta,
+		ReviewCompletionStreak: summary.ReviewCompletionStreak,
+		DaysSinceLastReview:    summary.DaysSinceLastReview,
+		ExpiringSoon:           expiringSoon,
+		Expired:                expired,
+		MissingOwner:           missingOwner,
+		LatestProofpackTime:    findLatestProofpackTime(proofpacks),
+		LastReviewedAt:         formatTimeOrDefault(summary.LastReviewedAt, "not reviewed yet"),
+		NextRecommendedReview:  summary.NextRecommendedReview.Format(time.RFC3339),
+		LastActivityAt:         formatTimeOrDefault(summary.LastActivityAt, "no activity yet"),
+		DegradedWarnings:       buildDegradedWarnings(degradedMode, persistenceMode),
+		Onboarding:             len(items) == 0,
+		StarterTemplates:       buildStarterTemplates(),
+		PriorityQueue:          buildPriorityQueue(expired, missingOwner, expiringSoon, summary.StaleEvidence, len(summary.RecentActivity), len(proofpacks)),
+	}
+
 	return vm
 }
 
