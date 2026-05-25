@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: evidencevault
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    ports: ["5432:5432"]
+  app:
+    build: .
+    env_file: .env.example
+    depends_on: [db]
+    ports: ["8080:8080"]
