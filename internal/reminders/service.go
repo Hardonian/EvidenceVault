@@ -24,7 +24,7 @@ func (s *Service) Run(ctx context.Context) (int, error) {
 	items := s.evidence.All()
 	sent := 0
 	today := time.Now().UTC().Format("2006-01-02")
-	toProcess := make([]evidence.Item, 0, len(items))
+	toSend := make([]evidence.Item, 0, len(items))
 	nowUTC := time.Now().UTC()
 	for _, it := range items {
 		if it.OwnerEmail == "" || it.ExpiryDate == nil {
@@ -42,6 +42,9 @@ func (s *Service) Run(ctx context.Context) (int, error) {
 			}
 			return nil
 		})
+		if !dup {
+			toSend = append(toSend, it)
+		}
 	}
 
 	for _, it := range toSend {

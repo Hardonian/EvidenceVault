@@ -120,6 +120,7 @@ func (m *MemoryStore) Write(fn func(*State) error) error {
 	defer m.mu.Unlock()
 	return fn(&m.state)
 }
+func (m *MemoryStore) WithLock(fn func(*State) error) error { return m.Write(fn) }
 func emptyState() State {
 	return State{Tenants: map[string]string{}, Evidence: map[string][]EvidenceItem{}, EvidenceFile: map[string][]EvidenceFile{}, ReminderSent: map[string]struct{}{}, Proofpacks: map[string][]ProofpackMeta{}, AuditLogs: []AuditEntry{}, StripeEvents: map[string]struct{}{}, ReviewSnapshots: map[string][]ReviewSnapshot{}, OperationalEvents: map[string][]OperationalEvent{}, Activation: map[string]ActivationMilestones{}, OperationalSnapshots: map[string][]OperationalSnapshot{}, ReviewReports: map[string][]ReviewReport{}}
 }

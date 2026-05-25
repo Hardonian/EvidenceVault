@@ -62,3 +62,22 @@ func TestOperationalSnapshotAndReport(t *testing.T) {
 		t.Fatal("expected review report exports")
 	}
 }
+
+func TestNarrativesAndComparisons(t *testing.T) {
+	st := persistence.NewMemoryStore()
+	ev := evidence.NewService(st, 100)
+	svc := NewService(st, ev)
+	ctx := context.Background()
+	_, _ = ev.Create(ctx, "t4", evidence.Item{Title: "old", Category: "Ops", Status: "expired", ReminderDaysBefore: 7, UpdatedAt: time.Now().UTC().AddDate(0, 0, -210)})
+	_, _ = svc.GenerateReviewSnapshot(ctx, "t4")
+	_, _ = ev.Create(ctx, "t4", evidence.Item{Title: "new", Category: "Ops", Status: "active", OwnerEmail: "o@x.com", ReminderDaysBefore: 7})
+	_, _ = svc.GenerateReviewSnapshot(ctx, "t4")
+	sum, _ := svc.BuildSummary(ctx, "t4", nil)
+	if len(sum.Narratives) == 0 {
+		t.Fatal("expected narratives")
+	}
+	cmp, err := svc.CompareReviews(ctx, "t4", 0, 1)
+	if err != nil || cmp.Markdown() == "" || cmp.PlainText() == "" {
+		t.Fatal("expected comparison export")
+	}
+}

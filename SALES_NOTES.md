@@ -28,3 +28,6 @@
 
 ## Operational continuity memory
 EvidenceVault emphasizes deterministic operational memory, recurring reviews, and historical truth without AI or analytics theatre.
+
+## Positioning update
+Sell deterministic operational memory, not analytics dashboards. Emphasize explainable review narratives, canonical comparison exports, and longitudinal continuity truth.

@@ -13,3 +13,6 @@ Start in demo mode (`DEMO_MODE=true`) and tenant `pilot-demo`.
 
 ## Operational continuity memory
 EvidenceVault emphasizes deterministic operational memory, recurring reviews, and historical truth without AI or analytics theatre.
+
+## Demo extension: continuity workflow
+Show latest review, compare with previous review, export markdown comparison, and walk narrative history to prove institutional memory accumulation.

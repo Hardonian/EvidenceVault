@@ -90,6 +90,9 @@ func (s Server) registerAppRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/app/reviews", method(http.MethodPost, s.generateReview))
 	mux.HandleFunc("/app/export/evidence.csv", method(http.MethodGet, s.exportEvidenceCSV))
 	mux.HandleFunc("/app/export/reviews.csv", method(http.MethodGet, s.exportReviewCSV))
+	mux.HandleFunc("/app/export/narratives.md", method(http.MethodGet, s.exportNarrativesMarkdown))
+	mux.HandleFunc("/app/export/review-comparison.md", method(http.MethodGet, s.exportReviewComparisonMarkdown))
+	mux.HandleFunc("/app/export/review-comparison.txt", method(http.MethodGet, s.exportReviewComparisonText))
 	mux.HandleFunc("/billing/checkout", method(http.MethodPost, s.checkout))
 	mux.HandleFunc("/billing/portal", method(http.MethodPost, s.portal))
 	mux.HandleFunc("/webhooks/stripe", method(http.MethodPost, s.webhook))
@@ -349,3 +352,47 @@ func (s Server) exportReviewCSV(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(b.Bytes())
 }
 func intToStr(n int) string { return strconv.Itoa(n) }
+
+func (s Server) exportNarrativesMarkdown(w http.ResponseWriter, r *http.Request) {
+	c, ok := s.authContext(w, r)
+	if !ok {
+		return
+	}
+	sum, err := s.Operations.BuildSummary(r.Context(), c.TenantID, nil)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	var b strings.Builder
+	b.WriteString("# Operational Narratives\n\n")
+	for _, n := range sum.Narratives {
+		b.WriteString("- [" + n.Scope + "] " + n.Message + " (evidence: " + n.Evidence + ")\n")
+	}
+	w.Header().Set("Content-Type", "text/markdown")
+	_, _ = w.Write([]byte(b.String()))
+}
+
+func (s Server) exportReviewComparisonMarkdown(w http.ResponseWriter, r *http.Request) {
+	s.exportReviewComparison(w, r, true)
+}
+func (s Server) exportReviewComparisonText(w http.ResponseWriter, r *http.Request) {
+	s.exportReviewComparison(w, r, false)
+}
+func (s Server) exportReviewComparison(w http.ResponseWriter, r *http.Request, md bool) {
+	c, ok := s.authContext(w, r)
+	if !ok {
+		return
+	}
+	cmp, err := s.Operations.CompareReviews(r.Context(), c.TenantID, 0, 1)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	if md {
+		w.Header().Set("Content-Type", "text/markdown")
+		_, _ = w.Write([]byte(cmp.Markdown()))
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain")
+	_, _ = w.Write([]byte(cmp.PlainText()))
+}

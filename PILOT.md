@@ -14,3 +14,6 @@ Weekly workflow: template create -> owner assign -> resolve urgency queue -> sna
 
 ## Operational continuity memory
 EvidenceVault emphasizes deterministic operational memory, recurring reviews, and historical truth without AI or analytics theatre.
+
+## Pilot continuity objectives
+Validate recurring review ritual adoption, narrative usefulness, and review-comparison exports for procurement and audit conversations.

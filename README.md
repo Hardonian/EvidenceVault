@@ -48,3 +48,6 @@ EvidenceVault is a compliance-operations utility. It helps teams track evidence,
 
 ## Operational continuity memory
 EvidenceVault emphasizes deterministic operational memory, recurring reviews, and historical truth without AI or analytics theatre.
+
+## Institutional Memory and Operational Continuity
+EvidenceVault is evolving into an operational continuity and institutional memory system. New deterministic layers include operational narratives, review comparisons, continuity heuristics, and founder conversion intelligence derived from persisted history only.

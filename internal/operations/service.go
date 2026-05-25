@@ -37,6 +37,23 @@ type UsageSignals struct {
 	RecoveryTrend      string
 }
 
+type Narrative struct {
+	Scope       string
+	Message     string
+	Evidence    string
+	GeneratedAt time.Time
+}
+
+type ReviewComparison struct {
+	From, To                                 persistence.ReviewSnapshot
+	HealthDelta, UnresolvedDelta             int
+	StaleDelta, OwnerlessDelta, ExpiredDelta int
+	CadenceDeltaDays                         int
+	State                                    string
+	PersistentUnresolved                     bool
+	RepeatedOperationalFriction              bool
+}
+
 type Summary struct {
 	HealthScore, Expired, ExpiringSoon, MissingOwner, StaleEvidence, Unresolved int
 	PreviousHealthScore, HealthDelta, UnresolvedDelta                           int
@@ -55,6 +72,7 @@ type Summary struct {
 	Trend7, Trend30                                                             TrendWindow
 	Usage                                                                       UsageSignals
 	FounderSignals                                                              []string
+	Narratives                                                                  []Narrative
 }
 type MilestoneState struct {
 	Key, Label string
@@ -101,6 +119,15 @@ func (s *Service) BuildSummary(ctx context.Context, tenantID string, items []evi
 		if arr := st.ReviewSnapshots[tenantID]; len(arr) > 0 {
 			sum.ReviewCompletionStreak = reviewStreak(arr)
 		}
+		a := st.Activation[tenantID]
+		sum.ActivationChecklist = []MilestoneState{
+			{Key: "first_evidence_created", Label: "First evidence created", ReachedAt: a.FirstEvidenceCreatedAt},
+			{Key: "first_file_uploaded", Label: "First file uploaded", ReachedAt: a.FirstFileUploadedAt},
+			{Key: "first_reminder_run", Label: "First reminder run", ReachedAt: a.FirstReminderRunAt},
+			{Key: "first_proofpack_generated", Label: "First proofpack generated", ReachedAt: a.FirstProofpackGeneratedAt},
+			{Key: "first_operational_review", Label: "First operational review", ReachedAt: a.FirstOperationalReviewAt},
+			{Key: "second_weekly_review", Label: "Second weekly review", ReachedAt: a.SecondWeeklyReviewAt},
+		}
 		return nil
 	})
 	done := 0
@@ -109,18 +136,72 @@ func (s *Service) BuildSummary(ctx context.Context, tenantID string, items []evi
 			done++
 		}
 	}
-	sum.ActivationCompletionPercent = done * 100 / len(sum.ActivationChecklist)
+	if len(sum.ActivationChecklist) > 0 {
+		sum.ActivationCompletionPercent = done * 100 / len(sum.ActivationChecklist)
+	}
 	sum.PilotMaturityStage = deriveStage(sum, len(items))
 	sum.Friction = frictionIndicators(sum, now)
 	sum.UpgradeSignals = upgradeSignals(sum, len(items))
 	sum.Trend7, sum.Trend30 = s.buildTrends(tenantID, sum.HealthScore)
 	sum.Usage = usageSignals(sum, len(sum.ProofpackHistory))
 	sum.FounderSignals = founderSignals(sum)
+	sum.Narratives = s.buildNarratives(tenantID, sum)
 	if !sum.LastReviewedAt.IsZero() {
 		sum.DaysSinceLastReview = int(now.Sub(sum.LastReviewedAt).Hours() / 24)
 	}
 	return sum, nil
 }
+
+func (s *Service) buildNarratives(tenantID string, sum Summary) []Narrative {
+	now := time.Now().UTC()
+	out := []Narrative{{Scope: "latest", Message: fmt.Sprintf("Health moved %d points review-to-review.", sum.HealthDelta), Evidence: fmt.Sprintf("health=%d previous=%d", sum.HealthScore, sum.PreviousHealthScore), GeneratedAt: now}}
+	if sum.Trend30.HealthDelta != 0 {
+		out = append(out, Narrative{Scope: "30-day", Message: fmt.Sprintf("30-day health changed %d points (%d -> %d).", sum.Trend30.HealthDelta, sum.Trend30.StartHealth, sum.Trend30.EndHealth), Evidence: "operational snapshots", GeneratedAt: now})
+	}
+	if sum.StaleEvidence > 0 {
+		out = append(out, Narrative{Scope: "latest", Message: fmt.Sprintf("Stale evidence stands at %d unresolved items.", sum.StaleEvidence), Evidence: "current evidence inventory", GeneratedAt: now})
+	}
+	_ = tenantID
+	return out
+}
+
+func (s *Service) CompareReviews(ctx context.Context, tenantID string, fromIdx, toIdx int) (ReviewComparison, error) {
+	_ = ctx
+	cmp := ReviewComparison{}
+	err := s.store.Read(func(st *persistence.State) error {
+		arr := st.ReviewSnapshots[tenantID]
+		if fromIdx < 0 || toIdx < 0 || fromIdx >= len(arr) || toIdx >= len(arr) {
+			return fmt.Errorf("review index out of range")
+		}
+		cmp.From, cmp.To = arr[fromIdx], arr[toIdx]
+		return nil
+	})
+	if err != nil {
+		return cmp, err
+	}
+	cmp.HealthDelta = cmp.From.HealthScore - cmp.To.HealthScore
+	cmp.UnresolvedDelta = cmp.From.UnresolvedIssues - cmp.To.UnresolvedIssues
+	cmp.StaleDelta = cmp.From.StaleEvidence - cmp.To.StaleEvidence
+	cmp.OwnerlessDelta = cmp.From.MissingOwners - cmp.To.MissingOwners
+	cmp.ExpiredDelta = cmp.From.ExpiredEvidence - cmp.To.ExpiredEvidence
+	cmp.CadenceDeltaDays = int(cmp.From.LastReviewedAt.Sub(cmp.To.LastReviewedAt).Hours() / 24)
+	cmp.PersistentUnresolved = cmp.From.UnresolvedIssues > 0 && cmp.To.UnresolvedIssues > 0
+	cmp.RepeatedOperationalFriction = cmp.From.StaleEvidence > 0 && cmp.To.StaleEvidence > 0
+	cmp.State = "stable"
+	if cmp.HealthDelta > 2 && cmp.UnresolvedDelta <= 0 {
+		cmp.State = "improving"
+	}
+	if cmp.HealthDelta < -2 || cmp.UnresolvedDelta > 0 {
+		cmp.State = "degrading"
+	}
+	return cmp, nil
+}
+
+func (c ReviewComparison) Markdown() string {
+	return fmt.Sprintf("# Review Comparison\n\n- Health delta: %d\n- Unresolved delta: %d\n- Stale delta: %d\n- Ownerless delta: %d\n- Expired delta: %d\n- Cadence delta days: %d\n- State: %s\n- Persistent unresolved items: %t\n- Repeated operational friction: %t\n", c.HealthDelta, c.UnresolvedDelta, c.StaleDelta, c.OwnerlessDelta, c.ExpiredDelta, c.CadenceDeltaDays, c.State, c.PersistentUnresolved, c.RepeatedOperationalFriction)
+}
+
+func (c ReviewComparison) PlainText() string { return strings.ReplaceAll(c.Markdown(), "- ", "* ") }
 
 func deriveStage(sum Summary, totalEvidence int) string {
 	has := func(key string) bool {
@@ -264,7 +345,7 @@ func trendStatus(delta int) string {
 
 func (s *Service) buildTrends(tenantID string, currentHealth int) (TrendWindow, TrendWindow) {
 	var snaps []persistence.OperationalSnapshot
-	_ = s.store.WithLock(func(st *persistence.State) error {
+	_ = s.store.Read(func(st *persistence.State) error {
 		snaps = append(snaps, st.OperationalSnapshots[tenantID]...)
 		return nil
 	})
@@ -315,7 +396,7 @@ func (s *Service) GenerateOperationalSnapshot(ctx context.Context, tenantID stri
 	sum, _ := s.BuildSummary(ctx, tenantID, nil)
 	now := time.Now().UTC()
 	snap := persistence.OperationalSnapshot{TenantID: tenantID, Date: now.Format("2006-01-02"), CreatedAt: now, UnresolvedCount: sum.Unresolved, ExpiredEvidenceCount: sum.Expired, OwnerlessEvidenceCount: sum.MissingOwner, StaleEvidenceCount: sum.StaleEvidence, HealthScore: sum.HealthScore, ProofpackCount: len(sum.ProofpackHistory), ReviewStreak: sum.ReviewCompletionStreak, ActivationPercent: sum.ActivationCompletionPercent, MaturityStage: sum.PilotMaturityStage, TotalEvidenceCount: sum.Unresolved + (sum.HealthScore / 100), OwnersCount: len(sum.Owners)}
-	_ = s.store.WithLock(func(st *persistence.State) error {
+	_ = s.store.Write(func(st *persistence.State) error {
 		arr := st.OperationalSnapshots[tenantID]
 		if len(arr) > 0 && arr[0].Date == snap.Date {
 			st.OperationalSnapshots[tenantID][0] = snap
@@ -337,7 +418,7 @@ func (s *Service) GenerateReviewReport(ctx context.Context, tenantID string) (pe
 	now := time.Now().UTC()
 	md := fmt.Sprintf("# Operational Review\n\n- Health score: %d\n- Unresolved: %d (delta %d)\n- Stale evidence: %d\n- Missing owners: %d\n- Proofpack activity: %d\n- Activation: %d%%\n- Maturity stage: %s\n", sum.HealthScore, sum.Unresolved, sum.UnresolvedDelta, sum.StaleEvidence, sum.MissingOwner, len(sum.ProofpackHistory), sum.ActivationCompletionPercent, sum.PilotMaturityStage)
 	rep := persistence.ReviewReport{TenantID: tenantID, ID: now.Format("20060102T150405"), GeneratedAt: now, Summary: "Deterministic operational review report", Markdown: md, PlainText: strings.ReplaceAll(md, "- ", "* "), HTML: "<pre>" + md + "</pre>"}
-	_ = s.store.WithLock(func(st *persistence.State) error {
+	_ = s.store.Write(func(st *persistence.State) error {
 		st.ReviewReports[tenantID] = append([]persistence.ReviewReport{rep}, st.ReviewReports[tenantID]...)
 		return nil
 	})
@@ -361,7 +442,34 @@ func (s *Service) GenerateReviewSnapshot(ctx context.Context, tenantID string) (
 
 func (s *Service) RecordEvent(tenantID, typ, message, entityID string) {
 	_ = s.store.Write(func(st *persistence.State) error {
-		st.OperationalEvents[tenantID] = append([]persistence.OperationalEvent{{TenantID: tenantID, Type: typ, Message: message, EntityID: entityID, CreatedAt: time.Now().UTC()}}, st.OperationalEvents[tenantID]...)
+		now := time.Now().UTC()
+		st.OperationalEvents[tenantID] = append([]persistence.OperationalEvent{{TenantID: tenantID, Type: typ, Message: message, EntityID: entityID, CreatedAt: now}}, st.OperationalEvents[tenantID]...)
+		ms := st.Activation[tenantID]
+		switch typ {
+		case "evidence.created":
+			if ms.FirstEvidenceCreatedAt == nil {
+				ms.FirstEvidenceCreatedAt = &now
+			}
+		case "evidence.file.uploaded":
+			if ms.FirstFileUploadedAt == nil {
+				ms.FirstFileUploadedAt = &now
+			}
+		case "proofpack.generated":
+			if ms.FirstProofpackGeneratedAt == nil {
+				ms.FirstProofpackGeneratedAt = &now
+			}
+		case "review.snapshot.generated":
+			if ms.FirstOperationalReviewAt == nil {
+				ms.FirstOperationalReviewAt = &now
+			} else if ms.SecondWeeklyReviewAt == nil {
+				ms.SecondWeeklyReviewAt = &now
+			}
+		case "reminders.run":
+			if ms.FirstReminderRunAt == nil {
+				ms.FirstReminderRunAt = &now
+			}
+		}
+		st.Activation[tenantID] = ms
 		return nil
 	})
 }
