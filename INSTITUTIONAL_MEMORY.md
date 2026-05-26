@@ -1,12 +1,5 @@
 # INSTITUTIONAL_MEMORY
 
-EvidenceVault uses deterministic, append-only operational history to preserve institutional memory without AI inference.
+EvidenceVault stores review snapshots, operational snapshots, events, and review reports as append-only tenant history.
 
-## Why it matters
-- Operational truth is sourced from persisted reviews, snapshots, proofpacks, and events.
-- Recurring review continuity builds retention through historical dependence.
-- Simplicity is intentional: no analytics SDKs, no hidden scoring, no realtime infrastructure.
-
-## Current limitations
-- Comparison exports currently focus on latest-vs-previous review by default.
-- Lifecycle continuity heuristics are deterministic but rule-based and bounded to captured history.
+History is the source of truth for narratives/comparisons and pilot ritual progression.

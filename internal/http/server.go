@@ -368,6 +368,9 @@ func (s Server) exportNarrativesMarkdown(w http.ResponseWriter, r *http.Request)
 	for _, n := range sum.Narratives {
 		b.WriteString("- [" + n.Scope + "] " + n.Message + " (evidence: " + n.Evidence + ")\n")
 	}
+	if len(sum.Narratives) == 0 {
+		b.WriteString("- No review history yet. Generate your first weekly snapshot to start continuity memory.\n")
+	}
 	w.Header().Set("Content-Type", "text/markdown")
 	_, _ = w.Write([]byte(b.String()))
 }
@@ -385,7 +388,13 @@ func (s Server) exportReviewComparison(w http.ResponseWriter, r *http.Request, m
 	}
 	cmp, err := s.Operations.CompareReviews(r.Context(), c.TenantID, 0, 1)
 	if err != nil {
-		http.Error(w, err.Error(), 400)
+		if md {
+			w.Header().Set("Content-Type", "text/markdown")
+			_, _ = w.Write([]byte("# Review Comparison\n\nNo comparison available yet. Generate at least two weekly reviews to unlock historical comparison.\n"))
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		_, _ = w.Write([]byte("Review comparison unavailable: generate at least two weekly reviews first.\n"))
 		return
 	}
 	if md {

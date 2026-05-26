@@ -1,18 +1,8 @@
-# Founder Demo Script (60-second value, 5-minute flow)
-Start in demo mode (`DEMO_MODE=true`) and tenant `pilot-demo`.
-- Show urgency order: expired, missing owner, expiring, stale.
-- Show health trend and unresolved delta.
-- Show recent activity + proofpack history.
-- Create one template record to show instant activation.
-- Explain weekly review loop and retention: score + accountability improve each week.
+# DEMO SCRIPT
 
-## Founder demo refinement
-- Show activation checklist progression and current maturity stage.
-- Walk through attention-needed drift warnings and unresolved trend.
-- Show CSV exports for trust portability.
-
-## Operational continuity memory
-EvidenceVault emphasizes deterministic operational memory, recurring reviews, and historical truth without AI or analytics theatre.
-
-## Demo extension: continuity workflow
-Show latest review, compare with previous review, export markdown comparison, and walk narrative history to prove institutional memory accumulation.
+1. Open `/app` with pilot tenant.
+2. Show pilot ritual state: week, last review date, next action.
+3. Trigger review snapshot.
+4. Export `/app/export/narratives.md`.
+5. Export `/app/export/review-comparison.md`.
+6. Explain deterministic retention loop: weekly review -> persisted memory -> historical comparison -> portable proof.

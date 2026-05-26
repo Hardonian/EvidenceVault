@@ -81,3 +81,22 @@ func TestNarrativesAndComparisons(t *testing.T) {
 		t.Fatal("expected comparison export")
 	}
 }
+
+func TestPilotRitualProgression(t *testing.T) {
+	st := persistence.NewMemoryStore()
+	ev := evidence.NewService(st, 100)
+	svc := NewService(st, ev)
+	ctx := context.Background()
+	_, _ = ev.Create(ctx, "t5", evidence.Item{Title: "a", Category: "Ops", Status: "active", OwnerEmail: "o@x.com"})
+	sum, _ := svc.BuildSummary(ctx, "t5", nil)
+	if sum.PilotRitual.Week != 1 || sum.PilotRitual.NextAction != "generate first snapshot" {
+		t.Fatal("expected week1 pre-review state")
+	}
+	for i := 0; i < 4; i++ {
+		_, _ = svc.GenerateReviewSnapshot(ctx, "t5")
+	}
+	sum, _ = svc.BuildSummary(ctx, "t5", nil)
+	if !sum.PilotRitual.Week4Ready || !sum.PilotRitual.ComparisonExportReady || sum.PilotRitual.Week != 4 {
+		t.Fatal("expected week4 export readiness")
+	}
+}

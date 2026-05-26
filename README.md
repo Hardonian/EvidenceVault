@@ -1,53 +1,33 @@
 # EvidenceVault
 
-EvidenceVault is a compliance-operations utility. It helps teams track evidence, renewal reminders, audit history, and proofpack exports. It does **not** certify compliance or provide legal advice.
+EvidenceVault is a deterministic compliance-operations utility for small teams running evidence hygiene and weekly operational reviews.
 
-## Implemented now
-- Tenant-scoped evidence creation/list/update.
-- Free-tier write limit enforced in evidence service.
-- Evidence file upload requires `evidence_id` and creates `evidence_files` + updates `evidence_items.source_file_path`.
-- Reminder run uses evidence expiry data, logs `sent`/`failed`, and is idempotent per evidence/day/channel.
-- Proofpack generation persists payload and includes tenant, evidence, files, reminders, audit summary, generated timestamp, app version, and limitations statement.
-- Billing checkout/portal creation and stripe webhook processing write audit events.
-- `/app` uses persisted evidence and proofpack state.
+## What is implemented now
+- Tenant-scoped evidence + file attachment workflows.
+- Deterministic weekly review snapshots persisted as canonical history.
+- Deterministic review comparison (latest vs previous) with stable/improving/degrading state.
+- Operational narratives generated only from persisted/current truth.
+- Export routes:
+  - `/app/export/narratives.md`
+  - `/app/export/review-comparison.md`
+  - `/app/export/review-comparison.txt`
+- 4-week pilot ritual state (week, cadence, next action, export readiness).
 
 ## Intentionally not implemented
-- Compliance certification workflows.
-- Legal interpretation of evidence quality.
-- Multi-channel reminder transports beyond email adapter.
+- AI-generated recommendations.
+- Analytics SDK or user tracking pipelines.
+- Compliance certification/legal advice.
 
-## Degraded modes
-- Storage unavailable: upload route returns HTTP 503 with explicit message.
-- Email adapter failure: reminder is logged as `failed` (not `sent`).
-- Stripe not configured/unavailable: billing routes return explicit errors.
+## 4-week pilot ritual
+1. Week 1: generate first review snapshot.
+2. Week 2: continue weekly review and compare latest vs previous.
+3. Week 3: continue weekly review and track recurring friction.
+4. Week 4: export review comparison + narratives for founder conversion proof.
 
-## Verification commands
+## Verification
 - `go mod tidy`
-- `gofmt -w ./...`
+- `test -z "$(gofmt -l .)"`
 - `go vet ./...`
 - `go test ./...`
 - `go build ./cmd/server`
 - `make smoke`
-
-## Pilot workflow
-1. Create dev tenant and auth headers.
-2. Create evidence (`POST /app/evidence`).
-3. Upload file with `evidence_id` (`POST /app/evidence/upload`).
-4. Run reminders (`POST /api/cron/reminders`).
-5. Generate proofpack (`POST /app/proofpacks`).
-6. Open `/app` for operational state.
-
-## Persistence Modes
-- Default build remains zero-dependency and uses `PERSISTENCE_MODE=memory` (ephemeral/degraded).
-- Pilot durable mode: `PERSISTENCE_MODE=file` with `DATA_DIR` writable; single-instance only.
-- Production fail-closed: memory mode in production requires `ALLOW_EPHEMERAL_PRODUCTION=true`.
-- Cloud Run caveat: file mode requires a writable mounted volume/path.
-- Postgres adapter is roadmap hardening, not active default.
-- Verify: `go mod tidy && test -z "$(gofmt -l .)" && go vet ./... && go test ./... && go build ./cmd/server && make smoke`.
-\n## Pilot truth update\n- Zero external Go dependencies.\n- Persistence modes: memory (degraded) and file (pilot durable).\n- No compliance certification or legal advice.\n- No AI claims.\n- Production fail-closed if persistence is memory unless explicitly overridden.\n
-
-## Operational continuity memory
-EvidenceVault emphasizes deterministic operational memory, recurring reviews, and historical truth without AI or analytics theatre.
-
-## Institutional Memory and Operational Continuity
-EvidenceVault is evolving into an operational continuity and institutional memory system. New deterministic layers include operational narratives, review comparisons, continuity heuristics, and founder conversion intelligence derived from persisted history only.
