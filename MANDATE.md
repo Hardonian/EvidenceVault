@@ -3,6 +3,9 @@
 - Evidence before claims.
 - Graceful degradation.
 - Tenant isolation.
+- Evidence Graph edges must be source-backed with reason, source, timestamp, confidence, and state.
+- Missing graph data must be explicit degraded state, not inferred certainty.
+- No unverifiable graph relationship may be presented as fact.
 - Billing safety.
 - Webhook idempotency.
 - Operator truth.

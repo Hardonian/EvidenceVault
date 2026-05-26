@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"evidencevault/internal/evidence"
+	"evidencevault/internal/evidencegraph"
 	"evidencevault/internal/operations"
 )
 
@@ -33,6 +34,14 @@ type DashboardViewModel struct {
 	Onboarding                                                          bool
 	StarterTemplates                                                    []TemplateCard
 	PriorityQueue                                                       []PriorityItem
+	// Evidence Graph fields
+	GraphReadinessScore int
+	GraphHealth         string
+	GraphDegradedReasons []string
+	GraphNextActions    []evidencegraph.NextAction
+	GraphNodeCount      int
+	GraphEdgeCount      int
+	GraphAvailable      bool
 }
 
 func calculateItemCounts(items []evidence.Item) (int, int, int) {
@@ -50,9 +59,19 @@ func calculateItemCounts(items []evidence.Item) (int, int, int) {
 	}
 	return e1, e2, e3
 }
-func buildDashboardViewModel(items []evidence.Item, proofpacks []map[string]any, freeTierLimit int, persistenceMode string, degradedMode bool, summary operations.Summary) DashboardViewModel {
+func buildDashboardViewModel(items []evidence.Item, proofpacks []map[string]any, freeTierLimit int, persistenceMode string, degradedMode bool, summary operations.Summary, graphData *evidencegraph.Graph) DashboardViewModel {
 	expiringSoon, expired, missingOwner := calculateItemCounts(items)
-	return DashboardViewModel{Onboarding: len(items) == 0, StarterTemplates: buildStarterTemplates(), PriorityQueue: buildPriorityQueue(expired, missingOwner, expiringSoon, summary.StaleEvidence, len(summary.RecentActivity), len(proofpacks)), TotalEvidence: len(items), TotalProofpacks: len(proofpacks), Plan: "free", FreeTierUsage: usageText(len(items), freeTierLimit), PersistenceMode: persistenceMode, HealthScore: summary.HealthScore, UnresolvedIssues: summary.Unresolved, StaleEvidence: summary.StaleEvidence, OwnerSummaries: summary.Owners, RecentActivity: summary.RecentActivity, Cadence: summary.Cadence, PreviousHealthScore: summary.PreviousHealthScore, HealthDelta: summary.HealthDelta, UnresolvedDelta: summary.UnresolvedDelta, ReviewCompletionStreak: summary.ReviewCompletionStreak, DaysSinceLastReview: summary.DaysSinceLastReview, ExpiringSoon: expiringSoon, Expired: expired, MissingOwner: missingOwner, LatestProofpackTime: findLatestProofpackTime(proofpacks), LastReviewedAt: formatTimeOrDefault(summary.LastReviewedAt, "not reviewed yet"), NextRecommendedReview: summary.NextRecommendedReview.Format(time.RFC3339), LastActivityAt: formatTimeOrDefault(summary.LastActivityAt, "no activity yet"), DegradedWarnings: buildDegradedWarnings(degradedMode, persistenceMode), ActivationCompletionPercent: summary.ActivationCompletionPercent, ActivationChecklist: summary.ActivationChecklist, PilotMaturityStage: summary.PilotMaturityStage, PilotRitual: summary.PilotRitual, Friction: summary.Friction, UpgradeSignals: summary.UpgradeSignals, FounderSignals: summary.FounderSignals}
+	vm := DashboardViewModel{Onboarding: len(items) == 0, StarterTemplates: buildStarterTemplates(), PriorityQueue: buildPriorityQueue(expired, missingOwner, expiringSoon, summary.StaleEvidence, len(summary.RecentActivity), len(proofpacks)), TotalEvidence: len(items), TotalProofpacks: len(proofpacks), Plan: "free", FreeTierUsage: usageText(len(items), freeTierLimit), PersistenceMode: persistenceMode, HealthScore: summary.HealthScore, UnresolvedIssues: summary.Unresolved, StaleEvidence: summary.StaleEvidence, OwnerSummaries: summary.Owners, RecentActivity: summary.RecentActivity, Cadence: summary.Cadence, PreviousHealthScore: summary.PreviousHealthScore, HealthDelta: summary.HealthDelta, UnresolvedDelta: summary.UnresolvedDelta, ReviewCompletionStreak: summary.ReviewCompletionStreak, DaysSinceLastReview: summary.DaysSinceLastReview, ExpiringSoon: expiringSoon, Expired: expired, MissingOwner: missingOwner, LatestProofpackTime: findLatestProofpackTime(proofpacks), LastReviewedAt: formatTimeOrDefault(summary.LastReviewedAt, "not reviewed yet"), NextRecommendedReview: summary.NextRecommendedReview.Format(time.RFC3339), LastActivityAt: formatTimeOrDefault(summary.LastActivityAt, "no activity yet"), DegradedWarnings: buildDegradedWarnings(degradedMode, persistenceMode), ActivationCompletionPercent: summary.ActivationCompletionPercent, ActivationChecklist: summary.ActivationChecklist, PilotMaturityStage: summary.PilotMaturityStage, PilotRitual: summary.PilotRitual, Friction: summary.Friction, UpgradeSignals: summary.UpgradeSignals, FounderSignals: summary.FounderSignals}
+	if graphData != nil {
+		vm.GraphAvailable = true
+		vm.GraphReadinessScore = graphData.Summary.GraphHealthScore
+		vm.GraphHealth = graphData.Summary.PilotReadinessState
+		vm.GraphDegradedReasons = graphData.DegradedReasons
+		vm.GraphNextActions = graphData.NextActions
+		vm.GraphNodeCount = len(graphData.Nodes)
+		vm.GraphEdgeCount = len(graphData.Edges)
+	}
+	return vm
 }
 func findLatestProofpackTime(proofpacks []map[string]any) string {
 	var latest time.Time

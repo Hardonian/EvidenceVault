@@ -7,6 +7,7 @@ PID=$!
 trap 'kill $PID 2>/dev/null || true' EXIT
 sleep 1
 curl -fsS http://127.0.0.1:18080/healthz >/dev/null
+curl -fsS http://127.0.0.1:18080/app/api/evidence-graph >/dev/null
 kill $PID; wait $PID || true
 DATA_DIR=$(mktemp -d)
 CRON_SECRET=secret ADDR=:18081 PERSISTENCE_MODE=file DATA_DIR=$DATA_DIR /tmp/ev >/tmp/ev2.log 2>&1 &
@@ -14,4 +15,5 @@ PID2=$!
 trap 'kill $PID2 2>/dev/null || true' EXIT
 sleep 1
 curl -fsS http://127.0.0.1:18081/readyz >/dev/null
+curl -fsS http://127.0.0.1:18081/app/export/evidence-graph.md >/dev/null
 kill $PID2; wait $PID2 || true

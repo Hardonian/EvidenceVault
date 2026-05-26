@@ -2,6 +2,18 @@
 <h1>EvidenceVault App</h1><p>Tenant: {{.Tenant}}</p>
 {{if .Dashboard.Onboarding}}<div style="padding:1rem;border:1px solid #6aa;background:#f2fffb;"><h2>First 3 evidence records (guided start)</h2><ol><li>Create an <b>insurance certificate</b> and assign an owner.</li><li>Create a <b>privacy policy</b> and set next review date.</li><li>Create a <b>vendor agreement</b> and set expiry reminder.</li></ol><p>Categories group operational work. Health score drops when evidence is expired, stale, or unowned. Run weekly operational review snapshots and export proofpacks monthly to keep continuity.</p></div>{{end}}
 <h2>Create from template</h2><form method="post" action="/app/evidence/template"><select name="template">{{range .Dashboard.StarterTemplates}}<option value="{{.Key}}">{{.Name}} — {{.Description}}</option>{{end}}</select><button>Create from template</button></form>
+{{if .Dashboard.GraphAvailable}}<h2>Evidence Graph</h2>
+<div style="padding:1rem;border:1px solid #ccc;background:#fafafa;margin-bottom:1rem;">
+<table style="width:100%;border-collapse:collapse;">
+<tr><td style="padding:0.3rem;"><b>Readiness score</b></td><td>{{.Dashboard.GraphReadinessScore}}/100</td></tr>
+<tr><td style="padding:0.3rem;"><b>Graph health</b></td><td>{{.Dashboard.GraphHealth}}</td></tr>
+<tr><td style="padding:0.3rem;"><b>Nodes</b></td><td>{{.Dashboard.GraphNodeCount}}</td></tr>
+<tr><td style="padding:0.3rem;"><b>Edges</b></td><td>{{.Dashboard.GraphEdgeCount}}</td></tr>
+</table>
+{{if .Dashboard.GraphDegradedReasons}}<h3>Degraded states</h3><ul>{{range .Dashboard.GraphDegradedReasons}}<li style="color:#996600;">{{.}}</li>{{end}}</ul>{{end}}
+{{if .Dashboard.GraphNextActions}}<h3>Next actions</h3><table border="1" style="border-collapse:collapse;width:100%;"><tr><th style="padding:0.3rem;">Priority</th><th>Action</th><th>Impact</th><th>Route</th></tr>{{range .Dashboard.GraphNextActions}}<tr><td style="padding:0.3rem;">{{.Severity}}</td><td>{{.Title}}</td><td>{{.Impact}}</td><td>{{if .SuggestedRoute}}<a href="{{.SuggestedRoute}}">{{.SuggestedRoute}}</a>{{end}}</td></tr>{{end}}</table>{{end}}
+<p><a href="/app/evidence-graph">Full graph explorer</a> | <a href="/app/export/evidence-graph.md">Export graph (Markdown)</a> | <a href="/app/export/evidence-graph.txt">Export graph (Text)</a> | <a href="/app/export/evidence-graph.json">Export graph (JSON)</a></p>
+</div>{{end}}
 <h2>Operational urgency (priority order)</h2><ol>{{range .Dashboard.PriorityQueue}}<li>{{.Label}}: {{.Count}}</li>{{end}}</ol>
 <h2>Health trend</h2><ul><li>Current score: {{.Dashboard.HealthScore}}</li><li>Previous review score: {{.Dashboard.PreviousHealthScore}}</li><li>Score delta: {{.Dashboard.HealthDelta}}</li><li>Unresolved delta: {{.Dashboard.UnresolvedDelta}}</li><li>Review streak: {{.Dashboard.ReviewCompletionStreak}}</li><li>Days since last review: {{.Dashboard.DaysSinceLastReview}}</li><li>Last activity: {{.Dashboard.LastActivityAt}}</li></ul>
 <h2>Founder visibility</h2><ul><li>Pilot maturity: {{.Dashboard.PilotMaturityStage}}</li><li>Activation completion: {{.Dashboard.ActivationCompletionPercent}}%</li><li>Persistence mode: {{.Dashboard.PersistenceMode}}</li>{{range .Dashboard.DegradedWarnings}}<li>{{.}}</li>{{end}}</ul>
@@ -11,7 +23,7 @@
 <h3>Recent timeline</h3><ul>{{range .Dashboard.RecentActivity}}<li>{{.CreatedAt}} - {{.Message}}</li>{{else}}<li>No events yet.</li>{{end}}</ul>
 <h3>Pilot ritual (founder conversion loop)</h3><ul><li>Current ritual week: {{.Dashboard.PilotRitual.Week}}</li><li>Review count: {{.Dashboard.PilotRitual.ReviewCount}}</li><li>{{if .Dashboard.PilotRitual.LastReviewAt}}Last review age (days): {{.Dashboard.PilotRitual.DaysSinceLastReview}}{{else}}No reviews yet. Generate your first review to begin the 4-week pilot ritual.{{end}}</li><li>Missed cadence warning: {{.Dashboard.PilotRitual.MissedCadence}}</li><li>Comparison readiness: {{.Dashboard.PilotRitual.ComparisonExportReady}}</li><li>Export readiness (week 4): {{.Dashboard.PilotRitual.Week4Ready}}</li><li>Next required action: {{.Dashboard.PilotRitual.NextAction}}</li></ul>
 <form method="post" action="/app/reviews"><button>Generate review snapshot (JSON)</button></form>
-<p><a href="/app/export/evidence.csv">Export evidence CSV</a> | <a href="/app/export/reviews.csv">Export review CSV</a> | <a href="/app/export/pilot-proof.md">Export pilot proof (Markdown)</a> | <a href="/app/export/pilot-proof.txt">Export pilot proof (Text)</a></p>
+<p><a href="/app/evidence-graph">Evidence Graph</a> | <a href="/app/export/evidence.csv">Export evidence CSV</a> | <a href="/app/export/reviews.csv">Export review CSV</a> | <a href="/app/export/evidence-graph.md">Export graph (Markdown)</a> | <a href="/app/export/evidence-graph.txt">Export graph (Text)</a> | <a href="/app/export/pilot-proof.md">Export pilot proof (Markdown)</a> | <a href="/app/export/pilot-proof.txt">Export pilot proof (Text)</a></p>
 <h2>Evidence</h2><table border="1"><tr><th>Title</th><th>Category</th><th>Status</th><th>Owner</th></tr>{{range .Items}}<tr><td>{{.Title}}</td><td>{{.Category}}</td><td>{{.Status}}</td><td>{{.OwnerEmail}}</td></tr>{{else}}<tr><td colspan="4">No evidence yet. Use templates above.</td></tr>{{end}}</table>
 <h2>Proofpacks</h2><form method="post" action="/app/proofpacks"><button>Generate Proofpack</button></form><ul>{{range .Proofpacks}}<li>{{.id}} - {{.created_at}}</li>{{else}}<li>No proofpacks yet.</li>{{end}}</ul>
 </body></html>

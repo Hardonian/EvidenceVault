@@ -49,3 +49,14 @@ EvidenceVault is a compliance-operations utility. It helps teams track evidence,
 ## Operational cadence update
 EvidenceVault now includes weekly operational reviews, deterministic health scoring, ownership-based unresolved queues, review snapshot export JSON, and operational history to create recurring operational continuity.
 See `OPERATING_CADENCE.md` for the weekly/monthly/quarterly loop and current manual limitations.
+
+## Evidence Graph update
+Implemented:
+- Tenant-scoped canonical Evidence Graph API, page, and Markdown/text/JSON exports.
+- Source-backed nodes and edges for evidence, owners, explicit vendor/control/risk mappings, proofpacks, operational events, snapshots, review reports, review comparisons, narratives, pilot readiness, exports, and actions.
+- Deterministic graph health scoring with explicit degraded states and next actions.
+
+Backlog:
+- Richer editing workflows for evidence control/vendor/risk mappings.
+- Pagination or grouping for very large tenant graphs.
+- Postgres adapter hardening for graph-specific query efficiency if production persistence expands beyond current file/memory modes.

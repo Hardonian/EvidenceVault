@@ -16,6 +16,7 @@ import (
 	"evidencevault/internal/demo"
 	"evidencevault/internal/email"
 	"evidencevault/internal/evidence"
+	"evidencevault/internal/evidencegraph"
 	httpserver "evidencevault/internal/http"
 	"evidencevault/internal/operations"
 	"evidencevault/internal/persistence"
@@ -47,10 +48,11 @@ func main() {
 	opsSvc := operations.NewService(store, ev)
 	billingSvc := &billing.Service{PriceID: cfg.StripePriceID, BaseURL: cfg.BaseURL, WebhookSecret: cfg.StripeWebhookSecret, SecretKey: cfg.StripeSecretKey, Audit: auditSvc, Store: store}
 	ppSvc := proofpack.NewService(store, auditSvc, ev)
-	if err := demo.Seed(ctx, cfg.AppEnv, cfg.DemoMode, ev, opsSvc, ppSvc, "pilot-demo"); err != nil {
+	graphBuilder := evidencegraph.NewBuilder(store, ev, opsSvc)
+	if err := demo.Seed(ctx, cfg.AppEnv, cfg.DemoMode, ev, opsSvc, ppSvc, store, "pilot-demo"); err != nil {
 		log.Fatal(err)
 	}
-	srv := &http.Server{Addr: cfg.Addr, Handler: httpserver.Server{Version: cfg.Version, Evidence: ev, Proofpack: ppSvc, Reminders: reminders.NewService(store, email.LogSender{}, auditSvc, ev), Storage: storage.LocalClient{BasePath: "uploads"}, Billing: billingSvc, Templates: tmpl, CronSecret: cfg.CronSecret, FreeTierLimit: cfg.FreeTierLimit, PersistenceMode: cfg.PersistenceMode, DegradedMode: cfg.DegradedMode, Operations: opsSvc}.Routes()}
+	srv := &http.Server{Addr: cfg.Addr, Handler: httpserver.Server{Version: cfg.Version, Evidence: ev, Proofpack: ppSvc, Reminders: reminders.NewService(store, email.LogSender{}, auditSvc, ev), Storage: storage.LocalClient{BasePath: "uploads"}, Billing: billingSvc, Templates: tmpl, CronSecret: cfg.CronSecret, FreeTierLimit: cfg.FreeTierLimit, PersistenceMode: cfg.PersistenceMode, DegradedMode: cfg.DegradedMode, Operations: opsSvc, EvidenceGraph: graphBuilder}.Routes()}
 	go func() {
 		log.Printf("listening on %s", cfg.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

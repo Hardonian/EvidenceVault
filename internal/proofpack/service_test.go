@@ -86,4 +86,7 @@ func TestExport(t *testing.T) {
 	if len(packs) != 1 {
 		t.Errorf("expected 1 proofpack in store, got %d", len(packs))
 	}
+	if ids, ok := packs[0]["evidence_ids"].([]string); !ok || len(ids) != 1 || ids[0] != evID {
+		t.Errorf("expected proofpack evidence manifest to include %q, got %v", evID, packs[0]["evidence_ids"])
+	}
 }

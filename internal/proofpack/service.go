@@ -24,7 +24,7 @@ func (s *Service) List(_ context.Context, tenantID string) ([]map[string]any, er
 	out := []map[string]any{}
 	_ = s.store.Read(func(st *persistence.State) error {
 		for _, p := range st.Proofpacks[tenantID] {
-			out = append(out, map[string]any{"id": p.ID, "created_at": p.CreatedAt})
+			out = append(out, map[string]any{"id": p.ID, "created_at": p.CreatedAt, "evidence_ids": p.EvidenceIDs})
 		}
 		return nil
 	})

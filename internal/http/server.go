@@ -14,6 +14,7 @@ import (
 	"evidencevault/internal/auth"
 	"evidencevault/internal/billing"
 	"evidencevault/internal/evidence"
+	"evidencevault/internal/evidencegraph"
 	"evidencevault/internal/operations"
 	"evidencevault/internal/proofpack"
 	"evidencevault/internal/reminders"
@@ -28,6 +29,7 @@ type Server struct {
 	Storage         storage.Client
 	Billing         *billing.Service
 	Operations      *operations.Service
+	EvidenceGraph   *evidencegraph.Builder
 	Templates       *template.Template
 	CronSecret      string
 	FreeTierLimit   int
@@ -88,8 +90,13 @@ func (s Server) registerAppRoutes(mux *http.ServeMux) {
 		http.Error(w, "method not allowed", 405)
 	})
 	mux.HandleFunc("/app/reviews", method(http.MethodPost, s.generateReview))
+	mux.HandleFunc("/app/evidence-graph", method(http.MethodGet, s.evidenceGraphPage))
+	mux.HandleFunc("/app/api/evidence-graph", method(http.MethodGet, s.evidenceGraphJSON))
 	mux.HandleFunc("/app/export/evidence.csv", method(http.MethodGet, s.exportEvidenceCSV))
 	mux.HandleFunc("/app/export/reviews.csv", method(http.MethodGet, s.exportReviewCSV))
+	mux.HandleFunc("/app/export/evidence-graph.md", method(http.MethodGet, s.exportEvidenceGraphMarkdown))
+	mux.HandleFunc("/app/export/evidence-graph.txt", method(http.MethodGet, s.exportEvidenceGraphText))
+	mux.HandleFunc("/app/export/evidence-graph.json", method(http.MethodGet, s.exportEvidenceGraphJSON))
 	mux.HandleFunc("/app/export/narratives.md", method(http.MethodGet, s.exportNarrativesMarkdown))
 	mux.HandleFunc("/app/export/review-comparison.md", method(http.MethodGet, s.exportReviewComparisonMarkdown))
 	mux.HandleFunc("/app/export/review-comparison.txt", method(http.MethodGet, s.exportReviewComparisonText))
@@ -121,7 +128,14 @@ func (s Server) app(w http.ResponseWriter, r *http.Request) {
 	if s.Operations != nil {
 		sum, _ = s.Operations.BuildSummary(r.Context(), c.TenantID, items)
 	}
-	_ = s.Templates.ExecuteTemplate(w, "app.html", map[string]any{"Tenant": c.TenantID, "Items": items, "Proofpacks": packs, "Dashboard": buildDashboardViewModel(items, packs, s.FreeTierLimit, s.PersistenceMode, s.DegradedMode, sum)})
+	var graphData *evidencegraph.Graph
+	if s.EvidenceGraph != nil {
+		g, err := s.EvidenceGraph.Build(r.Context(), c.TenantID)
+		if err == nil {
+			graphData = &g
+		}
+	}
+	_ = s.Templates.ExecuteTemplate(w, "app.html", map[string]any{"Tenant": c.TenantID, "Items": items, "Proofpacks": packs, "Dashboard": buildDashboardViewModel(items, packs, s.FreeTierLimit, s.PersistenceMode, s.DegradedMode, sum, graphData)})
 }
 func (s Server) listEvidence(w http.ResponseWriter, r *http.Request) {
 	c, ok := s.authContext(w, r)
