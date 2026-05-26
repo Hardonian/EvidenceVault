@@ -93,6 +93,19 @@ func (s *Service) List(_ context.Context, tenantID string) ([]Item, error) {
 	})
 	return out, nil
 }
+func (s *Service) Get(_ context.Context, tenantID, idv string) (Item, error) {
+	var out Item
+	err := s.store.Read(func(st *persistence.State) error {
+		for _, it := range st.Evidence[tenantID] {
+			if it.ID == idv {
+				out = Item(it)
+				return nil
+			}
+		}
+		return errors.New("not found")
+	})
+	return out, err
+}
 func (s *Service) Create(_ context.Context, tenantID string, it Item) (string, error) {
 	var idv string
 	err := s.store.Write(func(st *persistence.State) error {
