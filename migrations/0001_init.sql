@@ -15,6 +15,9 @@ expiry_date date,
 reminder_days_before int not null default 30,
 source_file_path text not null default '',
 notes text not null default '',
+control_refs text[] not null default '{}',
+vendor_refs text[] not null default '{}',
+risk_refs text[] not null default '{}',
 created_at timestamptz not null default now(),
 updated_at timestamptz not null default now());
 create table if not exists evidence_files (id text primary key default gen_random_uuid()::text, tenant_id text not null references tenants(id), evidence_id text not null references evidence_items(id), file_path text not null, content_type text not null default 'application/octet-stream', size_bytes bigint not null default 0, created_at timestamptz not null default now());

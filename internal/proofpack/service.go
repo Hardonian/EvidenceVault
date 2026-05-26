@@ -39,7 +39,11 @@ func (s *Service) Export(ctx context.Context, tenantID, version string) ([]byte,
 	}
 	pid := id.New()
 	_ = s.store.Write(func(st *persistence.State) error {
-		st.Proofpacks[tenantID] = append([]persistence.ProofpackMeta{{ID: pid, CreatedAt: time.Now().UTC()}}, st.Proofpacks[tenantID]...)
+		evidenceIDs := make([]string, 0, len(items))
+		for _, it := range items {
+			evidenceIDs = append(evidenceIDs, it.ID)
+		}
+		st.Proofpacks[tenantID] = append([]persistence.ProofpackMeta{{ID: pid, CreatedAt: time.Now().UTC(), EvidenceIDs: evidenceIDs}}, st.Proofpacks[tenantID]...)
 		return nil
 	})
 	s.audit.Log(ctx, tenantID, "", "proofpack.generated", "proofpack", pid, "{}")

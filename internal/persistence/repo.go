@@ -10,6 +10,7 @@ type EvidenceItem struct {
 	ID, TenantID, Title, Category, Status, OwnerName, OwnerEmail, SourceFilePath, Notes string
 	IssueDate, ExpiryDate                                                               *time.Time
 	ReminderDaysBefore                                                                  int
+	ControlRefs, VendorRefs, RiskRefs                                                   []string
 	CreatedAt, UpdatedAt                                                                time.Time
 }
 type EvidenceFile struct {
@@ -23,8 +24,9 @@ type AuditEntry struct {
 }
 
 type ProofpackMeta struct {
-	ID        string    `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
+	ID          string    `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	EvidenceIDs []string  `json:"evidence_ids,omitempty"`
 }
 
 type ReviewSnapshot struct {
