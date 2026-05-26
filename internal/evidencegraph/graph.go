@@ -218,7 +218,7 @@ func buildEvidence(w *work, tenantID string, now time.Time, items []evidence.Ite
 	for _, it := range items {
 		eid := evidenceNodeID(it.ID)
 		status := evidenceStatus(it, now)
-		w.node(Node{ID: eid, Type: "evidence", Label: it.Title, TenantID: tenantID, Status: status, CreatedAt: it.CreatedAt, UpdatedAt: it.UpdatedAt, Summary: it.Category + " evidence.", Metadata: map[string]any{"category": it.Category, "has_source_file": it.SourceFilePath != "", "controls": it.ControlRefs, "vendors": it.VendorRefs, "risks": it.RiskRefs}})
+		w.node(Node{ID: eid, Type: "evidence", Label: it.Title, TenantID: tenantID, Status: status, CreatedAt: it.CreatedAt, UpdatedAt: it.UpdatedAt, Summary: it.Category + " evidence.", Metadata: map[string]any{"raw_evidence_id": it.ID, "category": it.Category, "has_source_file": it.SourceFilePath != "", "controls": it.ControlRefs, "vendors": it.VendorRefs, "risks": it.RiskRefs}})
 		if oid, label, ok := ownerNode(it); ok {
 			w.node(Node{ID: oid, Type: "owner", Label: label, TenantID: tenantID, Status: "active", CreatedAt: it.CreatedAt, UpdatedAt: it.UpdatedAt, Summary: "Owner explicitly assigned on evidence record.", Metadata: map[string]any{"owner_name": it.OwnerName, "owner_email": it.OwnerEmail}})
 			w.edge(Edge{Type: "OWNS", SourceID: oid, TargetID: eid, TenantID: tenantID, Reason: "Evidence record has an explicit owner.", EvidenceSource: "evidence_items.owner_name/owner_email", Confidence: "explicit", Status: "active", CreatedAt: it.UpdatedAt})

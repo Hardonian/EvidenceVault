@@ -14,4 +14,4 @@ If you discover a security issue or isolation flaw, please report it immediately
 ## Architecture Security Notes
 
 - Persistence relies on single-file JSON maps per entity (in FileStore mode). File system permissions must strictly protect the `data/` directory.
-- The Evidence Graph API routes (`/api/graph`) do not execute arbitrary queries. The graph engine enforces strict predefined traversal rules.
+- The Evidence Graph API route (`/app/api/evidence-graph`) does not execute arbitrary queries. The graph engine enforces strict predefined traversal rules.

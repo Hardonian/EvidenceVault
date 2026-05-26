@@ -77,6 +77,7 @@ func (s Server) registerAppRoutes(mux *http.ServeMux) {
 		http.Error(w, "method not allowed", 405)
 	})
 	mux.HandleFunc("/app/evidence/upload", method(http.MethodPost, s.uploadEvidence))
+	mux.HandleFunc("/app/evidence/mappings", method(http.MethodPost, s.updateEvidenceMappings))
 	mux.HandleFunc("/app/evidence/template", method(http.MethodPost, s.createEvidenceFromTemplate))
 	mux.HandleFunc("/app/proofpacks", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {

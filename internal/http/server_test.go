@@ -12,7 +12,7 @@ import (
 	"evidencevault/internal/billing"
 	"evidencevault/internal/email"
 	"evidencevault/internal/evidence"
-	"evidencevault/internal/graph"
+	"evidencevault/internal/evidencegraph"
 	"evidencevault/internal/operations"
 	"evidencevault/internal/persistence"
 	"evidencevault/internal/proofpack"
@@ -26,8 +26,8 @@ func testServer(t *testing.T) (Server, http.Handler) {
 	ev := evidence.NewService(store, 10)
 	a := audit.NewService(store)
 	ops := operations.NewService(store, ev)
-	gb := graph.NewBuilder(store, ev, ops)
-	s := Server{Version: "test", Evidence: ev, Proofpack: proofpack.NewService(store, a, ev), Reminders: reminders.NewService(store, email.LogSender{}, a, ev), Billing: &billing.Service{}, Operations: ops, Graph: gb, Templates: template.Must(template.New("x").Parse(`{{define "landing.html"}}ok{{end}}{{define "app.html"}}ok{{end}}{{define "graph.html"}}ok{{end}}`))}
+	gb := evidencegraph.NewBuilder(store, ev, ops)
+	s := Server{Version: "test", Evidence: ev, Proofpack: proofpack.NewService(store, a, ev), Reminders: reminders.NewService(store, email.LogSender{}, a, ev), Billing: &billing.Service{}, Operations: ops, EvidenceGraph: gb, Templates: template.Must(template.New("x").Parse(`{{define "landing.html"}}ok{{end}}{{define "app.html"}}ok{{end}}{{define "evidence_graph.html"}}ok{{end}}`))}
 	return s, s.Routes()
 }
 
@@ -107,7 +107,7 @@ func TestTemplatesRender(t *testing.T) {
 
 func TestGraphPageRenders(t *testing.T) {
 	_, r := testServer(t)
-	req := httptest.NewRequest(http.MethodGet, "/app/graph", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/evidence-graph", nil)
 	req.Header.Set("X-Tenant-ID", "t")
 	req.Header.Set("X-User-ID", "u")
 	w := httptest.NewRecorder()
@@ -125,9 +125,9 @@ func TestGraphExportRoutes(t *testing.T) {
 		path        string
 		contentType string
 	}{
-		{"/app/export/graph.md", "text/markdown"},
-		{"/app/export/graph.txt", "text/plain"},
-		{"/app/export/graph.json", "application/json"},
+		{"/app/export/evidence-graph.md", "text/markdown"},
+		{"/app/export/evidence-graph.txt", "text/plain"},
+		{"/app/export/evidence-graph.json", "application/json"},
 	}
 	for _, tt := range tests {
 		req := httptest.NewRequest(http.MethodGet, tt.path, nil)
@@ -152,7 +152,7 @@ func TestGraphAPIRoutes(t *testing.T) {
 	s, r := testServer(t)
 	_, _ = s.Evidence.Create(t.Context(), "t", evidence.Item{Title: "X", Category: "IT", Status: "active", OwnerEmail: "o@t.com", ReminderDaysBefore: 30})
 
-	for _, path := range []string{"/api/graph", "/api/graph/summary"} {
+	for _, path := range []string{"/app/api/evidence-graph"} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
 		req.Header.Set("X-Tenant-ID", "t")
 		req.Header.Set("X-User-ID", "u")
@@ -173,10 +173,10 @@ func TestGraphRoutesRequireAuth(t *testing.T) {
 	ev := evidence.NewService(store, 10)
 	a := audit.NewService(store)
 	ops := operations.NewService(store, ev)
-	gb := graph.NewBuilder(store, ev, ops)
-	s := Server{Version: "test", Evidence: ev, Proofpack: proofpack.NewService(store, a, ev), Reminders: reminders.NewService(store, email.LogSender{}, a, ev), Billing: &billing.Service{}, Operations: ops, Graph: gb, Templates: template.Must(template.New("x").Parse(`{{define "landing.html"}}ok{{end}}{{define "app.html"}}ok{{end}}{{define "graph.html"}}ok{{end}}`))}
+	gb := evidencegraph.NewBuilder(store, ev, ops)
+	s := Server{Version: "test", Evidence: ev, Proofpack: proofpack.NewService(store, a, ev), Reminders: reminders.NewService(store, email.LogSender{}, a, ev), Billing: &billing.Service{}, Operations: ops, EvidenceGraph: gb, Templates: template.Must(template.New("x").Parse(`{{define "landing.html"}}ok{{end}}{{define "app.html"}}ok{{end}}{{define "evidence_graph.html"}}ok{{end}}`))}
 	r := s.Routes()
-	for _, path := range []string{"/app/graph", "/api/graph", "/api/graph/summary", "/app/export/graph.md", "/app/export/graph.json"} {
+	for _, path := range []string{"/app/evidence-graph", "/app/api/evidence-graph", "/app/export/evidence-graph.md", "/app/export/evidence-graph.json"} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
@@ -188,7 +188,7 @@ func TestGraphRoutesRequireAuth(t *testing.T) {
 
 func TestEmptyTenantGraphDegrades(t *testing.T) {
 	_, r := testServer(t)
-	req := httptest.NewRequest(http.MethodGet, "/app/export/graph.md", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/export/evidence-graph.md", nil)
 	req.Header.Set("X-Tenant-ID", "empty")
 	req.Header.Set("X-User-ID", "u")
 	w := httptest.NewRecorder()
