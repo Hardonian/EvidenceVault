@@ -46,7 +46,7 @@ func (f *FileStore) Write(fn func(*State) error) error {
 	return f.persistLocked()
 }
 func (f *FileStore) load() error {
-	files := map[string]any{"tenants.json": &f.state.Tenants, "evidence_items.json": &f.state.Evidence, "evidence_files.json": &f.state.EvidenceFile, "reminder_logs.json": &f.state.ReminderSent, "proofpacks.json": &f.state.Proofpacks, "audit_logs.json": &f.state.AuditLogs, "stripe_events.json": &f.state.StripeEvents, "review_snapshots.json": &f.state.ReviewSnapshots, "operational_events.json": &f.state.OperationalEvents, "activation_milestones.json": &f.state.Activation, "operational_snapshots.json": &f.state.OperationalSnapshots, "review_reports.json": &f.state.ReviewReports}
+	files := map[string]any{"tenants.json": &f.state.Tenants, "evidence_items.json": &f.state.Evidence, "evidence_files.json": &f.state.EvidenceFile, "reminder_logs.json": &f.state.ReminderSent, "proofpacks.json": &f.state.Proofpacks, "audit_logs.json": &f.state.AuditLogs, "stripe_events.json": &f.state.StripeEvents, "review_snapshots.json": &f.state.ReviewSnapshots, "operational_events.json": &f.state.OperationalEvents, "activation_milestones.json": &f.state.Activation, "operational_snapshots.json": &f.state.OperationalSnapshots, "review_reports.json": &f.state.ReviewReports, "unresolved_issues.json": &f.state.UnresolvedIssues, "adjudication_events.json": &f.state.AdjudicationEvents}
 	for n, tgt := range files {
 		p := filepath.Join(f.dir, n)
 		b, err := os.ReadFile(p)
@@ -66,7 +66,7 @@ func (f *FileStore) load() error {
 	return nil
 }
 func (f *FileStore) persistLocked() error {
-	files := map[string]any{"tenants.json": f.state.Tenants, "evidence_items.json": f.state.Evidence, "evidence_files.json": f.state.EvidenceFile, "reminder_logs.json": f.state.ReminderSent, "proofpacks.json": f.state.Proofpacks, "audit_logs.json": f.state.AuditLogs, "stripe_events.json": f.state.StripeEvents, "review_snapshots.json": f.state.ReviewSnapshots, "operational_events.json": f.state.OperationalEvents, "activation_milestones.json": f.state.Activation, "operational_snapshots.json": f.state.OperationalSnapshots, "review_reports.json": f.state.ReviewReports}
+	files := map[string]any{"tenants.json": f.state.Tenants, "evidence_items.json": f.state.Evidence, "evidence_files.json": f.state.EvidenceFile, "reminder_logs.json": f.state.ReminderSent, "proofpacks.json": f.state.Proofpacks, "audit_logs.json": f.state.AuditLogs, "stripe_events.json": f.state.StripeEvents, "review_snapshots.json": f.state.ReviewSnapshots, "operational_events.json": f.state.OperationalEvents, "activation_milestones.json": f.state.Activation, "operational_snapshots.json": f.state.OperationalSnapshots, "review_reports.json": f.state.ReviewReports, "unresolved_issues.json": f.state.UnresolvedIssues, "adjudication_events.json": f.state.AdjudicationEvents}
 	for n, v := range files {
 		b, err := json.MarshalIndent(v, "", "  ")
 		if err != nil {
@@ -74,9 +74,23 @@ func (f *FileStore) persistLocked() error {
 		}
 		tmp := filepath.Join(f.dir, n+".tmp")
 		final := filepath.Join(f.dir, n)
-		if err := os.WriteFile(tmp, b, 0o644); err != nil {
+		
+		file, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+		if err != nil {
 			return err
 		}
+		if _, err := file.Write(b); err != nil {
+			file.Close()
+			return err
+		}
+		if err := file.Sync(); err != nil {
+			file.Close()
+			return err
+		}
+		if err := file.Close(); err != nil {
+			return err
+		}
+
 		if err := os.Rename(tmp, final); err != nil {
 			return err
 		}

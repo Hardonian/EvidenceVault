@@ -241,10 +241,10 @@ func buildEvidence(w *work, tenantID string, now time.Time, items []evidence.Ite
 		if it.Status == "expired" {
 			w.edge(Edge{Type: "EXPIRED_BECAUSE", SourceID: eid, TargetID: actionNodeID(actionID("replace_expired_evidence", it.ID)), TenantID: tenantID, Reason: "Evidence status is expired.", EvidenceSource: "evidence_items.status", Confidence: "explicit", Status: "expired", CreatedAt: now})
 		}
-		if isOwnerless(it) {
+		if it.IsOwnerless() {
 			w.edge(Edge{Type: "OWNERLESS_BECAUSE", SourceID: eid, TargetID: actionNodeID(actionID("assign_owner", it.ID)), TenantID: tenantID, Reason: "Evidence lacks owner fields.", EvidenceSource: "evidence_items.owner_name/owner_email", Confidence: "explicit", Status: "missing", CreatedAt: now})
 		}
-		if isStale(it, now) {
+		if it.IsStale(now) {
 			w.edge(Edge{Type: "STALE_BECAUSE", SourceID: eid, TargetID: actionNodeID(actionID("refresh_stale_evidence", it.ID)), TenantID: tenantID, Reason: "Evidence updated_at is older than 180 days.", EvidenceSource: "evidence_items.updated_at", Confidence: "derived", Status: "stale", CreatedAt: now})
 		}
 	}
@@ -340,10 +340,10 @@ func nextActions(tenantID string, now time.Time, items []evidence.Item, data Ten
 		if it.Status == "expired" {
 			out = append(out, action("replace_expired_evidence", "expired", 25, "Replace expired evidence: "+it.Title, "Upload or record current evidence for this expired item.", it.ID, id, "/app", "Evidence status is expired."))
 		}
-		if isOwnerless(it) {
+		if it.IsOwnerless() {
 			out = append(out, action("assign_owner", "ownerless", 18, "Assign owner to "+it.Title, "Add an explicit owner name or email.", it.ID, id, "/app", "Evidence has no owner_name or owner_email."))
 		}
-		if isStale(it, now) {
+		if it.IsStale(now) {
 			out = append(out, action("refresh_stale_evidence", "stale", 12, "Refresh stale evidence: "+it.Title, "Review and update this evidence.", it.ID, id, "/app", "Evidence updated_at is older than 180 days."))
 		}
 		if len(it.ControlRefs) == 0 {
@@ -379,7 +379,7 @@ func summary(tenantID string, now time.Time, items []evidence.Item, data TenantD
 	risks := map[string]struct{}{}
 	ownerless, expired, stale := 0, 0, 0
 	for _, it := range items {
-		if isOwnerless(it) {
+		if it.IsOwnerless() {
 			ownerless++
 		} else {
 			owners[strings.ToLower(strings.TrimSpace(it.OwnerEmail)+"|"+strings.TrimSpace(it.OwnerName))] = struct{}{}
@@ -387,7 +387,7 @@ func summary(tenantID string, now time.Time, items []evidence.Item, data TenantD
 		if it.Status == "expired" {
 			expired++
 		}
-		if isStale(it, now) {
+		if it.IsStale(now) {
 			stale++
 		}
 		for _, r := range it.RiskRefs {
@@ -486,10 +486,10 @@ func graphHealth(now time.Time, items []evidence.Item, data TenantData) int {
 		if it.Status == "expired" {
 			score -= 14
 		}
-		if isOwnerless(it) {
+		if it.IsOwnerless() {
 			score -= 10
 		}
-		if isStale(it, now) {
+		if it.IsStale(now) {
 			score -= 8
 		}
 		if len(it.ControlRefs) == 0 {
@@ -617,20 +617,7 @@ func severityRank(status string) int {
 }
 
 func evidenceStatus(it evidence.Item, now time.Time) string {
-	switch {
-	case it.Status == "expired":
-		return "expired"
-	case it.Status == "missing":
-		return "missing"
-	case isOwnerless(it):
-		return "ownerless"
-	case isStale(it, now):
-		return "stale"
-	case it.Status == "":
-		return "degraded"
-	default:
-		return it.Status
-	}
+	return it.CanonicalStatus(now)
 }
 
 func edgeStatus(status string) string {
@@ -668,16 +655,7 @@ func reviewStatus(snap persistence.ReviewSnapshot) string {
 	return "active"
 }
 
-func isOwnerless(it evidence.Item) bool {
-	return strings.TrimSpace(it.OwnerEmail) == "" && strings.TrimSpace(it.OwnerName) == ""
-}
-
-func isStale(it evidence.Item, now time.Time) bool {
-	return !it.UpdatedAt.IsZero() && it.UpdatedAt.Before(now.AddDate(0, 0, -180))
-}
-
-func ownerNode(it evidence.Item) (string, string, bool) {
-	name := strings.TrimSpace(it.OwnerName)
+func riskStatus(status string) string {
 	email := strings.TrimSpace(it.OwnerEmail)
 	if name == "" && email == "" {
 		return "", "", false

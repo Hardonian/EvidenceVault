@@ -24,6 +24,34 @@ type Item struct {
 	ControlRefs, VendorRefs, RiskRefs                                                   []string
 	CreatedAt, UpdatedAt                                                                time.Time
 }
+
+func (it Item) IsOwnerless() bool {
+	return strings.TrimSpace(it.OwnerEmail) == "" && strings.TrimSpace(it.OwnerName) == ""
+}
+
+func (it Item) IsStale(now time.Time) bool {
+	return !it.UpdatedAt.IsZero() && it.UpdatedAt.Before(now.AddDate(0, 0, -180))
+}
+
+func (it Item) CanonicalStatus(now time.Time) string {
+	if it.Status == "expired" {
+		return "expired"
+	}
+	if it.Status == "missing" {
+		return "missing"
+	}
+	if it.IsOwnerless() {
+		return "ownerless"
+	}
+	if it.IsStale(now) {
+		return "stale"
+	}
+	if it.Status == "" {
+		return "degraded"
+	}
+	return it.Status
+}
+
 type File struct {
 	EvidenceID, FilePath, ContentType string
 	SizeBytes                         int64

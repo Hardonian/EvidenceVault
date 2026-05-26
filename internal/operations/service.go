@@ -347,7 +347,7 @@ func evaluateItem(it evidence.Item, now time.Time, s *Summary, o *OwnerSummary) 
 		o.Unresolved++
 		s.HealthScore -= 10
 	}
-	if strings.TrimSpace(it.OwnerEmail) == "" && strings.TrimSpace(it.OwnerName) == "" {
+	if it.IsOwnerless() {
 		s.MissingOwner++
 		s.Unresolved++
 		s.HealthScore -= 15
@@ -355,7 +355,7 @@ func evaluateItem(it evidence.Item, now time.Time, s *Summary, o *OwnerSummary) 
 	if it.Status == "active" {
 		s.HealthScore += 1
 	}
-	if it.UpdatedAt.Before(now.AddDate(0, 0, -180)) {
+	if it.IsStale(now) {
 		s.StaleEvidence++
 		s.Unresolved++
 		o.Unresolved++
