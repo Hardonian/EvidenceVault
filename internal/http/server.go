@@ -93,6 +93,8 @@ func (s Server) registerAppRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/app/export/narratives.md", method(http.MethodGet, s.exportNarrativesMarkdown))
 	mux.HandleFunc("/app/export/review-comparison.md", method(http.MethodGet, s.exportReviewComparisonMarkdown))
 	mux.HandleFunc("/app/export/review-comparison.txt", method(http.MethodGet, s.exportReviewComparisonText))
+	mux.HandleFunc("/app/export/pilot-proof.md", method(http.MethodGet, s.exportPilotProofMarkdown))
+	mux.HandleFunc("/app/export/pilot-proof.txt", method(http.MethodGet, s.exportPilotProofText))
 	mux.HandleFunc("/billing/checkout", method(http.MethodPost, s.checkout))
 	mux.HandleFunc("/billing/portal", method(http.MethodPost, s.portal))
 	mux.HandleFunc("/webhooks/stripe", method(http.MethodPost, s.webhook))
@@ -404,4 +406,70 @@ func (s Server) exportReviewComparison(w http.ResponseWriter, r *http.Request, m
 	}
 	w.Header().Set("Content-Type", "text/plain")
 	_, _ = w.Write([]byte(cmp.PlainText()))
+}
+
+func (s Server) exportPilotProofMarkdown(w http.ResponseWriter, r *http.Request) {
+	s.exportPilotProof(w, r, true)
+}
+func (s Server) exportPilotProofText(w http.ResponseWriter, r *http.Request) {
+	s.exportPilotProof(w, r, false)
+}
+func (s Server) exportPilotProof(w http.ResponseWriter, r *http.Request, md bool) {
+	c, ok := s.authContext(w, r)
+	if !ok {
+		return
+	}
+	sum, err := s.Operations.BuildSummary(r.Context(), c.TenantID, nil)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	var b strings.Builder
+	b.WriteString("# Pilot Proof Bundle\n\n")
+	b.WriteString("- Tenant: " + c.TenantID + "\n")
+	b.WriteString("- Ritual week: " + intToStr(sum.PilotRitual.Week) + "\n")
+	b.WriteString("- Review count: " + intToStr(sum.PilotRitual.ReviewCount) + "\n")
+	if sum.PilotRitual.LastReviewAt != nil {
+		b.WriteString("- Last review at: " + sum.PilotRitual.LastReviewAt.Format(time.RFC3339) + "\n")
+		b.WriteString("- Last review age (days): " + intToStr(sum.PilotRitual.DaysSinceLastReview) + "\n")
+	} else {
+		b.WriteString("- Last review: none yet\n")
+	}
+	b.WriteString("- Missed cadence warning: " + strconv.FormatBool(sum.PilotRitual.MissedCadence) + "\n")
+	b.WriteString("- Comparison readiness: " + strconv.FormatBool(sum.PilotRitual.ComparisonExportReady) + "\n")
+	b.WriteString("- Export readiness (week 4): " + strconv.FormatBool(sum.PilotRitual.Week4Ready) + "\n")
+	b.WriteString("- Next required action: " + sum.PilotRitual.NextAction + "\n\n")
+	if sum.PilotRitual.ReviewCount == 0 {
+		b.WriteString("No review history exists yet. Generate the first weekly operational review to establish baseline continuity evidence.\n")
+	} else {
+		b.WriteString("## Latest Review Summary\n\n")
+		b.WriteString("- Health score: " + intToStr(sum.HealthScore) + "\n")
+		b.WriteString("- Unresolved: " + intToStr(sum.Unresolved) + "\n")
+		b.WriteString("- Stale evidence: " + intToStr(sum.StaleEvidence) + "\n")
+		b.WriteString("- Missing owners: " + intToStr(sum.MissingOwner) + "\n")
+		b.WriteString("- Expired evidence: " + intToStr(sum.Expired) + "\n\n")
+	}
+	b.WriteString("## Narrative\n\n")
+	if len(sum.Narratives) == 0 {
+		b.WriteString("- Narrative unavailable: no historical snapshots yet.\n")
+	} else {
+		for _, n := range sum.Narratives {
+			b.WriteString("- [" + n.Scope + "] " + n.Message + " (evidence: " + n.Evidence + ")\n")
+		}
+	}
+	b.WriteString("\n## Comparison\n\n")
+	if cmp, err := s.Operations.CompareReviews(r.Context(), c.TenantID, 0, 1); err == nil {
+		b.WriteString(cmp.Markdown())
+	} else {
+		b.WriteString("No comparison available yet. Generate at least two weekly reviews to unlock latest-vs-previous continuity proof.\n")
+	}
+	out := b.String()
+	if !md {
+		out = strings.ReplaceAll(out, "- ", "* ")
+		w.Header().Set("Content-Type", "text/plain")
+		_, _ = w.Write([]byte(out))
+		return
+	}
+	w.Header().Set("Content-Type", "text/markdown")
+	_, _ = w.Write([]byte(out))
 }

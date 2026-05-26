@@ -9,8 +9,9 @@
 <h3>Attention needed</h3><ul>{{range .Dashboard.Friction}}<li>{{.}}</li>{{else}}<li>No immediate operational drift warnings.</li>{{end}}</ul>
 <h3>Upgrade readiness</h3><ul>{{range .Dashboard.UpgradeSignals}}<li>{{.}}</li>{{else}}<li>No expansion signals yet.</li>{{end}}</ul>
 <h3>Recent timeline</h3><ul>{{range .Dashboard.RecentActivity}}<li>{{.CreatedAt}} - {{.Message}}</li>{{else}}<li>No events yet.</li>{{end}}</ul>
+<h3>Pilot ritual (founder conversion loop)</h3><ul><li>Current ritual week: {{.Dashboard.PilotRitual.Week}}</li><li>Review count: {{.Dashboard.PilotRitual.ReviewCount}}</li><li>{{if .Dashboard.PilotRitual.LastReviewAt}}Last review age (days): {{.Dashboard.PilotRitual.DaysSinceLastReview}}{{else}}No reviews yet. Generate your first review to begin the 4-week pilot ritual.{{end}}</li><li>Missed cadence warning: {{.Dashboard.PilotRitual.MissedCadence}}</li><li>Comparison readiness: {{.Dashboard.PilotRitual.ComparisonExportReady}}</li><li>Export readiness (week 4): {{.Dashboard.PilotRitual.Week4Ready}}</li><li>Next required action: {{.Dashboard.PilotRitual.NextAction}}</li></ul>
 <form method="post" action="/app/reviews"><button>Generate review snapshot (JSON)</button></form>
-<p><a href="/app/export/evidence.csv">Export evidence CSV</a> | <a href="/app/export/reviews.csv">Export review CSV</a></p>
+<p><a href="/app/export/evidence.csv">Export evidence CSV</a> | <a href="/app/export/reviews.csv">Export review CSV</a> | <a href="/app/export/pilot-proof.md">Export pilot proof (Markdown)</a> | <a href="/app/export/pilot-proof.txt">Export pilot proof (Text)</a></p>
 <h2>Evidence</h2><table border="1"><tr><th>Title</th><th>Category</th><th>Status</th><th>Owner</th></tr>{{range .Items}}<tr><td>{{.Title}}</td><td>{{.Category}}</td><td>{{.Status}}</td><td>{{.OwnerEmail}}</td></tr>{{else}}<tr><td colspan="4">No evidence yet. Use templates above.</td></tr>{{end}}</table>
 <h2>Proofpacks</h2><form method="post" action="/app/proofpacks"><button>Generate Proofpack</button></form><ul>{{range .Proofpacks}}<li>{{.id}} - {{.created_at}}</li>{{else}}<li>No proofpacks yet.</li>{{end}}</ul>
 </body></html>
