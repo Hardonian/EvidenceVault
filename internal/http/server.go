@@ -336,6 +336,9 @@ func (s Server) exportEvidenceCSV(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var b bytes.Buffer
+	if s.PersistenceMode == "memory" {
+		b.WriteString("# WARNING: EPHEMERAL MEMORY - UNTRUSTED PROVENANCE\n")
+	}
 	cw := csv.NewWriter(&b)
 	_ = cw.Write([]string{"id", "title", "category", "status", "owner_name", "owner_email", "updated_at"})
 	for _, it := range items {
@@ -358,6 +361,9 @@ func (s Server) exportReviewCSV(w http.ResponseWriter, r *http.Request) {
 		snaps = append(snaps, sum)
 	}
 	var b bytes.Buffer
+	if s.PersistenceMode == "memory" {
+		b.WriteString("# WARNING: EPHEMERAL MEMORY - UNTRUSTED PROVENANCE\n")
+	}
 	cw := csv.NewWriter(&b)
 	_ = cw.Write([]string{"generated_at", "health_score", "unresolved", "expired", "expiring_soon", "missing_owner", "stale_evidence", "maturity_stage"})
 	for _, s := range snaps {
@@ -381,6 +387,9 @@ func (s Server) exportNarrativesMarkdown(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	var b strings.Builder
+	if s.PersistenceMode == "memory" {
+		b.WriteString("> [!WARNING]\n> **EPHEMERAL MEMORY - UNTRUSTED PROVENANCE**\n\n")
+	}
 	b.WriteString("# Operational Narratives\n\n")
 	for _, n := range sum.Narratives {
 		b.WriteString("- [" + n.Scope + "] " + n.Message + " (evidence: " + n.Evidence + ")\n")
@@ -416,11 +425,21 @@ func (s Server) exportReviewComparison(w http.ResponseWriter, r *http.Request, m
 	}
 	if md {
 		w.Header().Set("Content-Type", "text/markdown")
-		_, _ = w.Write([]byte(cmp.Markdown()))
+		var b strings.Builder
+		if s.PersistenceMode == "memory" {
+			b.WriteString("> [!WARNING]\n> **EPHEMERAL MEMORY - UNTRUSTED PROVENANCE**\n\n")
+		}
+		b.WriteString(cmp.Markdown())
+		_, _ = w.Write([]byte(b.String()))
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain")
-	_, _ = w.Write([]byte(cmp.PlainText()))
+	var b strings.Builder
+	if s.PersistenceMode == "memory" {
+		b.WriteString("WARNING: EPHEMERAL MEMORY - UNTRUSTED PROVENANCE\n\n")
+	}
+	b.WriteString(cmp.PlainText())
+	_, _ = w.Write([]byte(b.String()))
 }
 
 func (s Server) exportPilotProofMarkdown(w http.ResponseWriter, r *http.Request) {
@@ -440,6 +459,13 @@ func (s Server) exportPilotProof(w http.ResponseWriter, r *http.Request, md bool
 		return
 	}
 	var b strings.Builder
+	if s.PersistenceMode == "memory" {
+		if md {
+			b.WriteString("> [!WARNING]\n> **EPHEMERAL MEMORY - UNTRUSTED PROVENANCE**\n\n")
+		} else {
+			b.WriteString("WARNING: EPHEMERAL MEMORY - UNTRUSTED PROVENANCE\n\n")
+		}
+	}
 	b.WriteString("# Pilot Proof Bundle\n\n")
 	b.WriteString("- Tenant: " + c.TenantID + "\n")
 	b.WriteString("- Ritual week: " + intToStr(sum.PilotRitual.Week) + "\n")

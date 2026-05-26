@@ -2,6 +2,8 @@ package proofpack
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"time"
 
@@ -37,13 +39,15 @@ func (s *Service) Export(ctx context.Context, tenantID, version string) ([]byte,
 	if err != nil {
 		return nil, err
 	}
+	hash := sha256.Sum256(b)
+	hashStr := hex.EncodeToString(hash[:])
 	pid := id.New()
 	_ = s.store.Write(func(st *persistence.State) error {
 		evidenceIDs := make([]string, 0, len(items))
 		for _, it := range items {
 			evidenceIDs = append(evidenceIDs, it.ID)
 		}
-		st.Proofpacks[tenantID] = append([]persistence.ProofpackMeta{{ID: pid, CreatedAt: time.Now().UTC(), EvidenceIDs: evidenceIDs}}, st.Proofpacks[tenantID]...)
+		st.Proofpacks[tenantID] = append([]persistence.ProofpackMeta{{ID: pid, CreatedAt: time.Now().UTC(), EvidenceIDs: evidenceIDs, Hash: hashStr}}, st.Proofpacks[tenantID]...)
 		return nil
 	})
 	s.audit.Log(ctx, tenantID, "", "proofpack.generated", "proofpack", pid, "{}")
