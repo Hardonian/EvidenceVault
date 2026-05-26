@@ -73,6 +73,18 @@ type Summary struct {
 	Usage                                                                       UsageSignals
 	FounderSignals                                                              []string
 	Narratives                                                                  []Narrative
+	PilotRitual                                                                 PilotRitualState
+}
+type PilotRitualState struct {
+	Week                        int
+	ReviewCount                 int
+	LastReviewAt                *time.Time
+	DaysSinceLastReview         int
+	MissedCadence               bool
+	Week4Ready                  bool
+	ComparisonExportReady       bool
+	ContinuityDependenceForming bool
+	NextAction                  string
 }
 type MilestoneState struct {
 	Key, Label string
@@ -149,20 +161,61 @@ func (s *Service) BuildSummary(ctx context.Context, tenantID string, items []evi
 	if !sum.LastReviewedAt.IsZero() {
 		sum.DaysSinceLastReview = int(now.Sub(sum.LastReviewedAt).Hours() / 24)
 	}
+	sum.PilotRitual = s.buildPilotRitual(tenantID, now)
 	return sum, nil
 }
 
 func (s *Service) buildNarratives(tenantID string, sum Summary) []Narrative {
 	now := time.Now().UTC()
-	out := []Narrative{{Scope: "latest", Message: fmt.Sprintf("Health moved %d points review-to-review.", sum.HealthDelta), Evidence: fmt.Sprintf("health=%d previous=%d", sum.HealthScore, sum.PreviousHealthScore), GeneratedAt: now}}
+	out := []Narrative{{Scope: "latest", Message: fmt.Sprintf("What changed: review health moved %d points and unresolved moved %d.", sum.HealthDelta, sum.UnresolvedDelta), Evidence: fmt.Sprintf("health=%d previous=%d unresolved=%d unresolved_delta=%d", sum.HealthScore, sum.PreviousHealthScore, sum.Unresolved, sum.UnresolvedDelta), GeneratedAt: now}}
+	if sum.Unresolved > 0 {
+		out = append(out, Narrative{Scope: "latest", Message: fmt.Sprintf("What persisted: %d unresolved operational items remain open.", sum.Unresolved), Evidence: fmt.Sprintf("unresolved=%d stale=%d ownerless=%d expired=%d", sum.Unresolved, sum.StaleEvidence, sum.MissingOwner, sum.Expired), GeneratedAt: now})
+	}
 	if sum.Trend30.HealthDelta != 0 {
-		out = append(out, Narrative{Scope: "30-day", Message: fmt.Sprintf("30-day health changed %d points (%d -> %d).", sum.Trend30.HealthDelta, sum.Trend30.StartHealth, sum.Trend30.EndHealth), Evidence: "operational snapshots", GeneratedAt: now})
+		out = append(out, Narrative{Scope: "30-day", Message: fmt.Sprintf("Why this matters: 30-day health is %s (%d -> %d) and indicates %s continuity.", sum.Trend30.Status, sum.Trend30.StartHealth, sum.Trend30.EndHealth, sum.Usage.Cadence), Evidence: "operational snapshots + review history", GeneratedAt: now})
 	}
 	if sum.StaleEvidence > 0 {
-		out = append(out, Narrative{Scope: "latest", Message: fmt.Sprintf("Stale evidence stands at %d unresolved items.", sum.StaleEvidence), Evidence: "current evidence inventory", GeneratedAt: now})
+		out = append(out, Narrative{Scope: "attention", Message: fmt.Sprintf("What needs attention: stale/unresolved patterns persist (%d stale).", sum.StaleEvidence), Evidence: "current evidence inventory", GeneratedAt: now})
+	}
+	if sum.DaysSinceLastReview > 9 {
+		out = append(out, Narrative{Scope: "cadence", Message: "Weekly cadence has slipped beyond 9 days; continuity risk is increasing.", Evidence: fmt.Sprintf("days_since_last_review=%d", sum.DaysSinceLastReview), GeneratedAt: now})
 	}
 	_ = tenantID
 	return out
+}
+
+func (s *Service) buildPilotRitual(tenantID string, now time.Time) PilotRitualState {
+	st := PilotRitualState{Week: 1, NextAction: "generate first snapshot"}
+	_ = s.store.Read(func(ps *persistence.State) error {
+		reviews := ps.ReviewSnapshots[tenantID]
+		st.ReviewCount = len(reviews)
+		if len(reviews) > 0 {
+			last := reviews[0].LastReviewedAt
+			st.LastReviewAt = &last
+			st.DaysSinceLastReview = int(now.Sub(last).Hours() / 24)
+			st.MissedCadence = st.DaysSinceLastReview > 9
+		}
+		return nil
+	})
+	if st.ReviewCount == 0 {
+		return st
+	}
+	if st.ReviewCount >= 4 {
+		st.Week = 4
+	} else {
+		st.Week = st.ReviewCount
+	}
+	st.ComparisonExportReady = st.ReviewCount >= 2
+	st.Week4Ready = st.ReviewCount >= 4
+	st.ContinuityDependenceForming = st.ReviewCount >= 2
+	st.NextAction = "continue weekly review"
+	if st.ComparisonExportReady {
+		st.NextAction = "compare latest vs previous"
+	}
+	if st.Week4Ready {
+		st.NextAction = "export week-4 comparison"
+	}
+	return st
 }
 
 func (s *Service) CompareReviews(ctx context.Context, tenantID string, fromIdx, toIdx int) (ReviewComparison, error) {
