@@ -9,7 +9,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security issue or isolation flaw, please report it immediately to security@example.com rather than opening a public issue. We will respond within 48 hours.
+If you discover a security issue or isolation flaw, please report it immediately to <security@example.com> rather than opening a public issue. We will respond within 48 hours.
 
 ## Architecture Security Notes
 
