@@ -1,47 +1,17 @@
-# EvidenceVault
+# Security at EvidenceVault
 
-EvidenceVault is a compliance-operations utility. It helps teams track evidence, renewal reminders, audit history, and proofpack exports. It does **not** certify compliance or provide legal advice.
+## Core Principles
 
-## Implemented now
-- Tenant-scoped evidence creation/list/update.
-- Free-tier write limit enforced in evidence service.
-- Evidence file upload requires `evidence_id` and creates `evidence_files` + updates `evidence_items.source_file_path`.
-- Reminder run uses evidence expiry data, logs `sent`/`failed`, and is idempotent per evidence/day/channel.
-- Proofpack generation persists payload and includes tenant, evidence, files, reminders, audit summary, generated timestamp, app version, and limitations statement.
-- Billing checkout/portal creation and stripe webhook processing write audit events.
-- `/app` uses persisted evidence and proofpack state.
+1. **Tenant Isolation:** EvidenceVault employs strict logical boundaries between tenants. All operational routes, graph construction layers, and persistence mechanisms require validated tenant scope. A failure to identify a tenant results in immediate rejection (fail-closed).
+2. **Operator Truth First:** We do not rewrite history. Actions are additive (events, snapshots). The Evidence Graph is deterministically reconstructed from raw data to ensure auditability and prevent "graph theatre" or hallucinated compliance.
+3. **No External Intelligence Hooks:** The system does not transmit tenant evidence to external Large Language Models or third-party inference services. All intelligence (readiness scoring, next actions) is computed locally, deterministically, and explainably.
+4. **Degraded State Safety:** The application must remain operational even if subsystems fail or persistence modes shift. Graph computations that fail must expose the exact degraded reasons rather than masking the error.
 
-## Intentionally not implemented
-- Compliance certification workflows.
-- Legal interpretation of evidence quality.
-- Multi-channel reminder transports beyond email adapter.
+## Reporting a Vulnerability
 
-## Degraded modes
-- Storage unavailable: upload route returns HTTP 503 with explicit message.
-- Email adapter failure: reminder is logged as `failed` (not `sent`).
-- Stripe not configured/unavailable: billing routes return explicit errors.
+If you discover a security issue or isolation flaw, please report it immediately to security@example.com rather than opening a public issue. We will respond within 48 hours.
 
-## Verification commands
-- `go mod tidy`
-- `gofmt -w ./...`
-- `go vet ./...`
-- `go test ./...`
-- `go build ./cmd/server`
-- `make smoke`
+## Architecture Security Notes
 
-## Pilot workflow
-1. Create dev tenant and auth headers.
-2. Create evidence (`POST /app/evidence`).
-3. Upload file with `evidence_id` (`POST /app/evidence/upload`).
-4. Run reminders (`POST /api/cron/reminders`).
-5. Generate proofpack (`POST /app/proofpacks`).
-6. Open `/app` for operational state.
-
-## Persistence Modes
-- Default build remains zero-dependency and uses `PERSISTENCE_MODE=memory` (ephemeral/degraded).
-- Pilot durable mode: `PERSISTENCE_MODE=file` with `DATA_DIR` writable; single-instance only.
-- Production fail-closed: memory mode in production requires `ALLOW_EPHEMERAL_PRODUCTION=true`.
-- Cloud Run caveat: file mode requires a writable mounted volume/path.
-- Postgres adapter is roadmap hardening, not active default.
-- Verify: `go mod tidy && test -z "$(gofmt -l .)" && go vet ./... && go test ./... && go build ./cmd/server && make smoke`.
-\n## Pilot truth update\n- Zero external Go dependencies.\n- Persistence modes: memory (degraded) and file (pilot durable).\n- No compliance certification or legal advice.\n- No AI claims.\n- Production fail-closed if persistence is memory unless explicitly overridden.\n
+- Persistence relies on single-file JSON maps per entity (in FileStore mode). File system permissions must strictly protect the `data/` directory.
+- The Evidence Graph API routes (`/api/graph`) do not execute arbitrary queries. The graph engine enforces strict predefined traversal rules.

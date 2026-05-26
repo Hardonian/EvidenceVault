@@ -14,7 +14,7 @@ import (
 	"evidencevault/internal/auth"
 	"evidencevault/internal/billing"
 	"evidencevault/internal/evidence"
-	"evidencevault/internal/evidencegraph"
+	"evidencevault/internal/graph"
 	"evidencevault/internal/operations"
 	"evidencevault/internal/proofpack"
 	"evidencevault/internal/reminders"
@@ -29,7 +29,7 @@ type Server struct {
 	Storage         storage.Client
 	Billing         *billing.Service
 	Operations      *operations.Service
-	EvidenceGraph   *evidencegraph.Builder
+	Graph           *graph.Builder
 	Templates       *template.Template
 	CronSecret      string
 	FreeTierLimit   int
@@ -128,9 +128,9 @@ func (s Server) app(w http.ResponseWriter, r *http.Request) {
 	if s.Operations != nil {
 		sum, _ = s.Operations.BuildSummary(r.Context(), c.TenantID, items)
 	}
-	var graphData *evidencegraph.Graph
-	if s.EvidenceGraph != nil {
-		g, err := s.EvidenceGraph.Build(r.Context(), c.TenantID)
+	var graphData *graph.Graph
+	if s.Graph != nil {
+		g, err := s.Graph.Build(r.Context(), c.TenantID)
 		if err == nil {
 			graphData = &g
 		}
