@@ -37,4 +37,7 @@ func TestSeedCreatesExpectedEvidence(t *testing.T) {
 	if len(sum.RecentActivity) == 0 || len(sum.ProofpackHistory) == 0 {
 		t.Fatal("expected demo activity/history")
 	}
+	if sum.PilotRitual.ReviewCount < 4 || sum.PilotRitual.Week != 4 || !sum.PilotRitual.Week4Ready {
+		t.Fatalf("expected deterministic 4-week ritual state, got %+v", sum.PilotRitual)
+	}
 }
