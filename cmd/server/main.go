@@ -52,7 +52,14 @@ func main() {
 	if err := demo.Seed(ctx, cfg.AppEnv, cfg.DemoMode, ev, opsSvc, ppSvc, store, "pilot-demo"); err != nil {
 		log.Fatal(err)
 	}
-	srv := &http.Server{Addr: cfg.Addr, Handler: httpserver.Server{Version: cfg.Version, Evidence: ev, Proofpack: ppSvc, Reminders: reminders.NewService(store, email.LogSender{}, auditSvc, ev), Storage: storage.LocalClient{BasePath: "uploads"}, Billing: billingSvc, Templates: tmpl, CronSecret: cfg.CronSecret, FreeTierLimit: cfg.FreeTierLimit, PersistenceMode: cfg.PersistenceMode, DegradedMode: cfg.DegradedMode, Operations: opsSvc, EvidenceGraph: graphBuilder}.Routes()}
+	srv := &http.Server{
+		Addr:           cfg.Addr,
+		Handler:        httpserver.Server{Version: cfg.Version, Evidence: ev, Proofpack: ppSvc, Reminders: reminders.NewService(store, email.LogSender{}, auditSvc, ev), Storage: storage.LocalClient{BasePath: "uploads"}, Billing: billingSvc, Templates: tmpl, CronSecret: cfg.CronSecret, FreeTierLimit: cfg.FreeTierLimit, PersistenceMode: cfg.PersistenceMode, DegradedMode: cfg.DegradedMode, Operations: opsSvc, EvidenceGraph: graphBuilder}.Routes(),
+		ReadTimeout:    15 * time.Second,
+		WriteTimeout:   30 * time.Second,
+		IdleTimeout:    60 * time.Second,
+		MaxHeaderBytes: 1 << 20, // 1 MB
+	}
 	go func() {
 		log.Printf("listening on %s", cfg.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
