@@ -13,8 +13,7 @@ import (
 )
 
 func TestSeedBlockedInProduction(t *testing.T) {
-	st := persistence.NewMemoryStore()
-	ev := evidence.NewService(st, 10)
+	ev := evidence.NewService(persistence.NewMemoryStore(), 10)
 	err := Seed(context.Background(), "production", true, ev, nil, nil, "tenant")
 	if !errors.Is(err, ErrDemoSeedBlockedInProduction) {
 		t.Fatalf("expected blocked error, got %v", err)
@@ -30,11 +29,14 @@ func TestSeedCreatesExpectedEvidence(t *testing.T) {
 		t.Fatal(err)
 	}
 	items, _ := ev.List(context.Background(), "tenant")
-	if len(items) < 4 {
+	if len(items) < 6 {
 		t.Fatalf("expected richer seed")
 	}
 	sum, _ := ops.BuildSummary(context.Background(), "tenant", nil)
 	if len(sum.RecentActivity) == 0 || len(sum.ProofpackHistory) == 0 {
 		t.Fatal("expected demo activity/history")
+	}
+	if sum.PilotRitual.ReviewCount < 4 || sum.PilotRitual.Week != 4 || !sum.PilotRitual.Week4Ready {
+		t.Fatalf("expected deterministic 4-week ritual state, got %+v", sum.PilotRitual)
 	}
 }

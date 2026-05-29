@@ -16,6 +16,7 @@ ID=$(curl -fsS -X POST "$BASE_URL/app/evidence" -H "X-Tenant-ID: $TENANT" -H "X-
 printf 'pilot file' >/tmp/pilot-evidence.txt
 curl -fsS -X POST "$BASE_URL/app/evidence/upload" -H "X-Tenant-ID: $TENANT" -H "X-User-ID: $USER_ID" -F "evidence_id=$ID" -F "file=@/tmp/pilot-evidence.txt;type=text/plain" >/dev/null
 curl -fsS -X POST "$BASE_URL/app/proofpacks" -H "X-Tenant-ID: $TENANT" -H "X-User-ID: $USER_ID" >/dev/null
+curl -fsS "$BASE_URL/app/export/evidence-graph.md" -H "X-Tenant-ID: $TENANT" -H "X-User-ID: $USER_ID" >/dev/null
 curl -fsS "$BASE_URL/app" -H "X-Tenant-ID: $TENANT" -H "X-User-ID: $USER_ID" >/dev/null
 curl -fsS "$BASE_URL/healthz" >/dev/null
 printf 'Pilot flow completed successfully.\n'

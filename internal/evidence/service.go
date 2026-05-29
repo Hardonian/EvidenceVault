@@ -13,7 +13,7 @@ import (
 
 var (
 	allowedStatus   = map[string]struct{}{"active": {}, "expiring": {}, "expired": {}, "missing": {}, "archived": {}}
-	allowedCategory = map[string]struct{}{"Security": {}, "Compliance": {}, "Finance": {}, "HR": {}, "IT": {}, "Legal": {}, "Other": {}}
+	allowedCategory = map[string]struct{}{"Security": {}, "Compliance": {}, "Finance": {}, "HR": {}, "IT": {}, "Legal": {}, "Ops": {}, "Other": {}}
 	maxReminderDays = 365
 )
 
@@ -21,8 +21,37 @@ type Item struct {
 	ID, TenantID, Title, Category, Status, OwnerName, OwnerEmail, SourceFilePath, Notes string
 	IssueDate, ExpiryDate                                                               *time.Time
 	ReminderDaysBefore                                                                  int
+	ControlRefs, VendorRefs, RiskRefs                                                   []string
 	CreatedAt, UpdatedAt                                                                time.Time
 }
+
+func (it Item) IsOwnerless() bool {
+	return strings.TrimSpace(it.OwnerEmail) == "" && strings.TrimSpace(it.OwnerName) == ""
+}
+
+func (it Item) IsStale(now time.Time) bool {
+	return !it.UpdatedAt.IsZero() && it.UpdatedAt.Before(now.AddDate(0, 0, -180))
+}
+
+func (it Item) CanonicalStatus(now time.Time) string {
+	if it.Status == "expired" {
+		return "expired"
+	}
+	if it.Status == "missing" {
+		return "missing"
+	}
+	if it.IsOwnerless() {
+		return "ownerless"
+	}
+	if it.IsStale(now) {
+		return "stale"
+	}
+	if it.Status == "" {
+		return "degraded"
+	}
+	return it.Status
+}
+
 type File struct {
 	EvidenceID, FilePath, ContentType string
 	SizeBytes                         int64
@@ -70,7 +99,19 @@ func Validate(it Item) error {
 	if it.IssueDate != nil && it.ExpiryDate != nil && it.ExpiryDate.Before(*it.IssueDate) {
 		return errors.New("expiry_date must be on or after issue_date")
 	}
+	if hasBlankRef(it.ControlRefs) || hasBlankRef(it.VendorRefs) || hasBlankRef(it.RiskRefs) {
+		return errors.New("mapping references must not be blank")
+	}
 	return nil
+}
+
+func hasBlankRef(refs []string) bool {
+	for _, r := range refs {
+		if strings.TrimSpace(r) == "" {
+			return true
+		}
+	}
+	return false
 }
 func (s *Service) List(_ context.Context, tenantID string) ([]Item, error) {
 	var out []Item
@@ -80,6 +121,19 @@ func (s *Service) List(_ context.Context, tenantID string) ([]Item, error) {
 	})
 	return out, nil
 }
+func (s *Service) Get(_ context.Context, tenantID, idv string) (Item, error) {
+	var out Item
+	err := s.store.Read(func(st *persistence.State) error {
+		for _, it := range st.Evidence[tenantID] {
+			if it.ID == idv {
+				out = Item(it)
+				return nil
+			}
+		}
+		return errors.New("not found")
+	})
+	return out, err
+}
 func (s *Service) Create(_ context.Context, tenantID string, it Item) (string, error) {
 	var idv string
 	err := s.store.Write(func(st *persistence.State) error {
@@ -87,6 +141,9 @@ func (s *Service) Create(_ context.Context, tenantID string, it Item) (string, e
 			return errors.New("free tier limit reached")
 		}
 		it.Status = deriveStatus(it.Status, it.ExpiryDate, it.ReminderDaysBefore, time.Now())
+		it.ControlRefs = normalizeRefs(it.ControlRefs)
+		it.VendorRefs = normalizeRefs(it.VendorRefs)
+		it.RiskRefs = normalizeRefs(it.RiskRefs)
 		if err := Validate(it); err != nil {
 			return err
 		}
@@ -103,6 +160,9 @@ func (s *Service) Create(_ context.Context, tenantID string, it Item) (string, e
 func (s *Service) Update(_ context.Context, tenantID, idv string, it Item) error {
 	return s.store.Write(func(st *persistence.State) error {
 		it.Status = deriveStatus(it.Status, it.ExpiryDate, it.ReminderDaysBefore, time.Now())
+		it.ControlRefs = normalizeRefs(it.ControlRefs)
+		it.VendorRefs = normalizeRefs(it.VendorRefs)
+		it.RiskRefs = normalizeRefs(it.RiskRefs)
 		if err := Validate(it); err != nil {
 			return err
 		}
@@ -120,6 +180,24 @@ func (s *Service) Update(_ context.Context, tenantID, idv string, it Item) error
 		}
 		return errors.New("not found")
 	})
+}
+
+func normalizeRefs(refs []string) []string {
+	seen := map[string]struct{}{}
+	out := []string{}
+	for _, ref := range refs {
+		clean := strings.Join(strings.Fields(ref), " ")
+		if clean == "" {
+			continue
+		}
+		key := strings.ToLower(clean)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, clean)
+	}
+	return out
 }
 func (s *Service) AttachFile(_ context.Context, tenantID, evidenceID, filePath, contentType string, sizeBytes int64) error {
 	return s.store.Write(func(st *persistence.State) error {

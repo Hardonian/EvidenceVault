@@ -3,32 +3,48 @@
 EvidenceVault is a deterministic compliance-operations system for small teams that need auditable continuity, weekly review discipline, and portable proof exports.
 
 Purpose: Top-level product and repository truth.
-Audience: Founders, operators, contributors, evaluators.
+Audience: Foundors, operators, contributors, evaluators.
 Canonical status: Authoritative for what is currently implemented in this repository.
 
 ## Implemented Product Truth
 - Tenant-scoped evidence lifecycle (create/list/update) with file attachment flow.
 - Deterministic weekly review snapshots persisted as historical truth.
 - Deterministic review comparison (latest vs previous) with stable/improving/degrading state.
-- Operational narratives generated from persisted/current data only.
-- Export surfaces:
+- Operational narratives generated only from persisted/current truth.
+- Evidence Graph generated from tenant-scoped persisted records, explicit mappings, operational history, proofpacks, review comparisons, pilot readiness, and deterministic next actions.
+- Export routes:
+  - `/app/api/evidence-graph`
+  - `/app/evidence-graph`
+  - `/app/export/evidence-graph.md`
+  - `/app/export/evidence-graph.txt`
+  - `/app/export/evidence-graph.json`
   - `/app/export/narratives.md`
   - `/app/export/review-comparison.md`
   - `/app/export/review-comparison.txt`
-- 4-week pilot ritual state derived from review continuity.
+  - `/app/export/pilot-proof.md`
+  - `/app/export/pilot-proof.txt`
+- 4-week pilot ritual state (week, cadence, next action, export readiness).
 - Proofpack generation and persisted payload for support/share workflows.
 
 ## Explicitly Not Implemented
 - AI-generated recommendations.
-- Hidden analytics pipelines or user-tracking SDK claims.
-- Compliance certification workflows or legal advice.
+- Analytics SDK or user tracking pipelines.
+- Compliance certification/legal advice.
+- Hidden scoring or inference outside persisted operational history.
 
-## Quickstart
-1. Start the app locally (see `DEPLOYMENT.md`).
-2. Create or select a tenant and open `/app`.
-3. Create evidence records and attach files.
-4. Run weekly review snapshots (`POST /app/reviews`).
-5. Export narratives/comparison and proof materials from `/app/export/*`.
+## Evidence Graph
+- Server-generated and tenant-scoped; no client-side tenant trust.
+- Edges include source, reason, confidence, status, and timestamp.
+- Control, vendor, and risk links require explicit persisted evidence mappings.
+- Empty/degraded states return first-run guidance, degraded reasons, and next actions.
+- See `docs/evidence-graph.md`.
+
+## 4-week pilot ritual
+1. Week 1: generate first review snapshot.
+2. Week 2: continue weekly review and compare latest vs previous.
+3. Week 3: continue weekly review and track recurring friction.
+4. Week 4: export review comparison + narratives for founder conversion proof.
+5. Pilot week is review-count-based (persisted snapshots), not calendar-enforced automation.
 
 ## Verification
 - `go mod tidy`

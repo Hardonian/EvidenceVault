@@ -10,6 +10,7 @@ type EvidenceItem struct {
 	ID, TenantID, Title, Category, Status, OwnerName, OwnerEmail, SourceFilePath, Notes string
 	IssueDate, ExpiryDate                                                               *time.Time
 	ReminderDaysBefore                                                                  int
+	ControlRefs, VendorRefs, RiskRefs                                                   []string
 	CreatedAt, UpdatedAt                                                                time.Time
 }
 type EvidenceFile struct {
@@ -23,7 +24,29 @@ type AuditEntry struct {
 }
 
 type ProofpackMeta struct {
+	ID          string    `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	EvidenceIDs []string  `json:"evidence_ids,omitempty"`
+	Hash        string    `json:"hash,omitempty"`
+}
+
+type UnresolvedIssue struct {
+	ID             string     `json:"id"`
+	TenantID       string     `json:"tenant_id"`
+	EvidenceID     string     `json:"evidence_id"`
+	Type           string     `json:"type"`
+	CreatedAt      time.Time  `json:"created_at"`
+	ResolvedAt     *time.Time `json:"resolved_at,omitempty"`
+	ResolvedReason string     `json:"resolved_reason,omitempty"`
+}
+
+type AdjudicationEvent struct {
 	ID        string    `json:"id"`
+	TenantID  string    `json:"tenant_id"`
+	IssueID   string    `json:"issue_id"`
+	Action    string    `json:"action"`
+	Operator  string    `json:"operator"`
+	Reason    string    `json:"reason"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -98,6 +121,8 @@ type State struct {
 	Activation           map[string]ActivationMilestones
 	OperationalSnapshots map[string][]OperationalSnapshot
 	ReviewReports        map[string][]ReviewReport
+	UnresolvedIssues     map[string][]UnresolvedIssue
+	AdjudicationEvents   map[string][]AdjudicationEvent
 }
 
 type Store interface {
@@ -122,7 +147,7 @@ func (m *MemoryStore) Write(fn func(*State) error) error {
 }
 func (m *MemoryStore) WithLock(fn func(*State) error) error { return m.Write(fn) }
 func emptyState() State {
-	return State{Tenants: map[string]string{}, Evidence: map[string][]EvidenceItem{}, EvidenceFile: map[string][]EvidenceFile{}, ReminderSent: map[string]struct{}{}, Proofpacks: map[string][]ProofpackMeta{}, AuditLogs: []AuditEntry{}, StripeEvents: map[string]struct{}{}, ReviewSnapshots: map[string][]ReviewSnapshot{}, OperationalEvents: map[string][]OperationalEvent{}, Activation: map[string]ActivationMilestones{}, OperationalSnapshots: map[string][]OperationalSnapshot{}, ReviewReports: map[string][]ReviewReport{}}
+	return State{Tenants: map[string]string{}, Evidence: map[string][]EvidenceItem{}, EvidenceFile: map[string][]EvidenceFile{}, ReminderSent: map[string]struct{}{}, Proofpacks: map[string][]ProofpackMeta{}, AuditLogs: []AuditEntry{}, StripeEvents: map[string]struct{}{}, ReviewSnapshots: map[string][]ReviewSnapshot{}, OperationalEvents: map[string][]OperationalEvent{}, Activation: map[string]ActivationMilestones{}, OperationalSnapshots: map[string][]OperationalSnapshot{}, ReviewReports: map[string][]ReviewReport{}, UnresolvedIssues: map[string][]UnresolvedIssue{}, AdjudicationEvents: map[string][]AdjudicationEvent{}}
 }
 
 var ErrDataDirRequired = errors.New("DATA_DIR is required for file persistence mode")
