@@ -155,6 +155,7 @@ func (s Server) createEvidence(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	r.Body = http.MaxBytesReader(w, r.Body, 1048576) // 1MB
 	var it evidence.Item
 	if err := json.NewDecoder(r.Body).Decode(&it); err != nil {
 		http.Error(w, err.Error(), 400)
@@ -296,6 +297,7 @@ func (s Server) portal(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"url": url})
 }
 func (s Server) webhook(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1048576) // 1MB
 	event, payload, err := s.Billing.VerifyWebhook(r)
 	if err != nil {
 		http.Error(w, err.Error(), 400)

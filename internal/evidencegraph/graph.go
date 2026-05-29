@@ -655,13 +655,6 @@ func reviewStatus(snap persistence.ReviewSnapshot) string {
 	return "active"
 }
 
-func riskStatus(status string) string {
-	if status == "active" {
-		return "active"
-	}
-	return "unresolved"
-}
-
 func ownerNode(it evidence.Item) (string, string, bool) {
 	name := strings.TrimSpace(it.OwnerName)
 	email := strings.TrimSpace(it.OwnerEmail)

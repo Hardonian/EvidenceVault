@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"context"
 	"html/template"
 	"io"
 	"net/http"
@@ -69,9 +70,9 @@ func TestExportRoutesDegradeGracefully(t *testing.T) {
 
 func TestPilotProofExportWithHistoryIncludesNarrativeAndComparisonReadiness(t *testing.T) {
 	s, r := testServer(t)
-	_, _ = s.Evidence.Create(t.Context(), "t", evidence.Item{Title: "Policy", Category: "Legal", Status: "active", OwnerName: "A", OwnerEmail: "a@example.com", ReminderDaysBefore: 30})
-	_, _ = s.Operations.GenerateReviewSnapshot(t.Context(), "t")
-	_, _ = s.Operations.GenerateReviewSnapshot(t.Context(), "t")
+	_, _ = s.Evidence.Create(context.Background(), "t", evidence.Item{Title: "Policy", Category: "Legal", Status: "active", OwnerName: "A", OwnerEmail: "a@example.com", ReminderDaysBefore: 30})
+	_, _ = s.Operations.GenerateReviewSnapshot(context.Background(), "t")
+	_, _ = s.Operations.GenerateReviewSnapshot(context.Background(), "t")
 	req := httptest.NewRequest(http.MethodGet, "/app/export/pilot-proof.md", nil)
 	req.Header.Set("X-Tenant-ID", "t")
 	req.Header.Set("X-User-ID", "u")
@@ -119,7 +120,7 @@ func TestGraphPageRenders(t *testing.T) {
 
 func TestGraphExportRoutes(t *testing.T) {
 	s, r := testServer(t)
-	_, _ = s.Evidence.Create(t.Context(), "t", evidence.Item{Title: "X", Category: "IT", Status: "active", OwnerEmail: "o@t.com", ReminderDaysBefore: 30})
+	_, _ = s.Evidence.Create(context.Background(), "t", evidence.Item{Title: "X", Category: "IT", Status: "active", OwnerEmail: "o@t.com", ReminderDaysBefore: 30})
 
 	tests := []struct {
 		path        string
@@ -150,7 +151,7 @@ func TestGraphExportRoutes(t *testing.T) {
 
 func TestGraphAPIRoutes(t *testing.T) {
 	s, r := testServer(t)
-	_, _ = s.Evidence.Create(t.Context(), "t", evidence.Item{Title: "X", Category: "IT", Status: "active", OwnerEmail: "o@t.com", ReminderDaysBefore: 30})
+	_, _ = s.Evidence.Create(context.Background(), "t", evidence.Item{Title: "X", Category: "IT", Status: "active", OwnerEmail: "o@t.com", ReminderDaysBefore: 30})
 
 	for _, path := range []string{"/app/api/evidence-graph"} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
