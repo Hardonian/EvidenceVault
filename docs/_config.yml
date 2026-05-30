@@ -1,0 +1,5 @@
+# GitHub Pages config
+# Serves the landing page from docs/ directory
+# Enable at: Settings > Pages > Source > Deploy from branch > main > /docs
+title: EvidenceVault
+description: Automated compliance evidence lifecycle management

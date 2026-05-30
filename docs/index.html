@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EvidenceVault — Compliance Evidence. No Spreadsheets. No Headaches.</title>
+    <meta name="description" content="Automate evidence collection, review, and proofpack export for SOC 2, ISO 27001, HIPAA. From audit prep to customer security reviews — one deterministic system starting at $49/mo." />
+    <meta name="keywords" content="compliance evidence, SOC 2 evidence, compliance automation, audit readiness, proofpack, evidence lifecycle, security compliance" />
+    <meta property="og:title" content="EvidenceVault — Compliance Evidence. No Spreadsheets. No Headaches." />
+    <meta property="og:description" content="Automate evidence collection, review, and proofpack export for SOC 2, ISO 27001, HIPAA." />
+    <meta property="og:type" content="website" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        * { font-family: 'Inter', system-ui, sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); }
+        .gradient-accent { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); }
+        .gradient-text { background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .feature-card:hover { transform: translateY(-2px); box-shadow: 0 20px 40px -12px rgba(59,130,246,0.15); }
+        .comparison-check { color: #22c55e; }
+        .comparison-x { color: #ef4444; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-300 antialiased">
+
+<!-- Navigation -->
+<nav class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg gradient-accent flex items-center justify-center text-white font-bold text-sm">EV</div>
+                <span class="text-white font-bold text-lg">EvidenceVault</span>
+            </div>
+            <div class="hidden md:flex items-center gap-6 text-sm">
+                <a href="#problem" class="hover:text-white transition">Problem</a>
+                <a href="#how-it-works" class="hover:text-white transition">How It Works</a>
+                <a href="#features" class="hover:text-white transition">Features</a>
+                <a href="#pricing" class="hover:text-white transition">Pricing</a>
+                <a href="#faq" class="hover:text-white transition">FAQ</a>
+            </div>
+            <a href="#cta" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-5 py-2 rounded-lg transition">Start Free Trial</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero -->
+<section class="gradient-bg border-b border-slate-800">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
+        <div class="max-w-3xl mx-auto text-center">
+            <div class="inline-flex items-center gap-1.5 bg-blue-900/30 border border-blue-800/40 rounded-full px-4 py-1.5 text-sm text-blue-300 mb-8">
+                <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+                Now in pilot — 4-week program, $500 credited toward first year
+            </div>
+            <h1 class="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-6">
+                Compliance Evidence.<br/>
+                <span class="gradient-text">No Spreadsheets. No Headaches.</span>
+            </h1>
+            <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+                Automate evidence collection, schedule deterministic review snapshots, 
+                and export portable proofpacks. From SOC 2 to customer security reviews — 
+                one system your whole team can use.
+            </p>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a href="#cta" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-3.5 rounded-lg text-lg transition shadow-lg shadow-blue-600/25">Start Free Trial</a>
+                <a href="#how-it-works" class="border border-slate-700 hover:border-slate-600 text-slate-300 font-medium px-8 py-3.5 rounded-lg text-lg transition">See How It Works →</a>
+            </div>
+            <div class="mt-10 flex items-center justify-center gap-8 text-sm text-slate-500">
+                <span>⚡ Setup in 5 minutes</span>
+                <span class="hidden sm:inline">·</span>
+                <span>🔐 Self-host available</span>
+                <span class="hidden sm:inline">·</span>
+                <span>📦 Portable proofpacks</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Problem -->
+<section id="problem" class="bg-slate-800/50 py-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-3xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold text-white text-center mb-6">The Evidence Nightmare</h2>
+            <p class="text-lg text-slate-400 text-center mb-12">Your next audit is coming. Your evidence is scattered across emails, Slack messages, and Google Drive. Someone quit last month and took the spreadsheet passwords with them.</p>
+        </div>
+        <div class="grid md:grid-cols-3 gap-8">
+            <div class="bg-slate-800 rounded-xl p-8 border border-slate-700 feature-card transition">
+                <div class="text-4xl mb-4">⏱️</div>
+                <h3 class="text-lg font-semibold text-white mb-3">40-80 Hours Per Audit</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">That's how long most teams spend gathering evidence before every audit cycle. Emails, Slack messages, shared drives — digital archaeology instead of compliance work.</p>
+            </div>
+            <div class="bg-slate-800 rounded-xl p-8 border border-slate-700 feature-card transition">
+                <div class="text-4xl mb-4">🔍</div>
+                <h3 class="text-lg font-semibold text-white mb-3">No Audit Trail</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">Who reviewed this evidence? When? Did they approve it? Your spreadsheet can't answer these questions. Your auditor will ask them.</p>
+            </div>
+            <div class="bg-slate-800 rounded-xl p-8 border border-slate-700 feature-card transition">
+                <div class="text-4xl mb-4">🚨</div>
+                <h3 class="text-lg font-semibold text-white mb-3">Procurement Fire Drills</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">A customer asks for your security documentation. Your team scrambles for a week. The deal slows down. At $150K+ per quarter in at-risk pipeline — how much is that costing you?</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works -->
+<section id="how-it-works" class="py-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl md:text-4xl font-bold text-white text-center mb-4">How It Works</h2>
+        <p class="text-slate-400 text-center mb-16 max-w-2xl mx-auto">Three steps from setup to audit-ready proofpack. No training required.</p>
+        <div class="grid md:grid-cols-3 gap-8 relative">
+            <!-- Connector line -->
+            <div class="hidden md:block absolute top-16 left-[20%] right-[20%] h-0.5 bg-gradient-to-r from-blue-500/40 via-purple-500/40 to-blue-500/40"></div>
+            
+            <div class="text-center relative">
+                <div class="w-16 h-16 rounded-full gradient-accent flex items-center justify-center text-white font-bold text-xl mx-auto mb-6 relative z-10">1</div>
+                <h3 class="text-xl font-semibold text-white mb-3">Upload Evidence</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">Drag-and-drop screenshots, config files, logs, and PDFs. Organize by control, framework, or custom tags. EvidenceVault handles the structure.</p>
+            </div>
+            <div class="text-center relative">
+                <div class="w-16 h-16 rounded-full gradient-accent flex items-center justify-center text-white font-bold text-xl mx-auto mb-6 relative z-10">2</div>
+                <h3 class="text-xl font-semibold text-white mb-3">Weekly Review Snapshots</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">Automated weekly reviews with SHA-256 hash-linked records. Every item has a deterministic audit trail — who reviewed what, when, and what changed.</p>
+            </div>
+            <div class="text-center relative">
+                <div class="w-16 h-16 rounded-full gradient-accent flex items-center justify-center text-white font-bold text-xl mx-auto mb-6 relative z-10">3</div>
+                <h3 class="text-xl font-semibold text-white mb-3">Export Proofpacks</h3>
+                <p class="text-slate-400 text-sm leading-relaxed">One-click export to PDF or XLSX with verification hashes. Auditors verify independently. Customer security reviews answered in 15 minutes, not 5 days.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features -->
+<section id="features" class="bg-slate-800/50 py-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl md:text-4xl font-bold text-white text-center mb-4">Everything You Need</h2>
+        <p class="text-slate-400 text-center mb-16 max-w-2xl mx-auto">Built for compliance teams who need to move fast without cutting corners.</p>
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 feature-card transition">
+                <div class="text-3xl mb-3">🕸️</div>
+                <h3 class="text-white font-semibold mb-2">Evidence Graph</h3>
+                <p class="text-slate-400 text-sm">See relationships between controls, evidence items, and reviews. One change ripples through your entire compliance posture.</p>
+            </div>
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 feature-card transition">
+                <div class="text-3xl mb-3">📸</div>
+                <h3 class="text-white font-semibold mb-2">Weekly Snapshots</h3>
+                <p class="text-slate-400 text-sm">Automated, hash-linked review records. Every snapshot is deterministic — tampering is detectable. Your auditor will thank you.</p>
+            </div>
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 feature-card transition">
+                <div class="text-3xl mb-3">📦</div>
+                <h3 class="text-white font-semibold mb-2">Proofpack Export</h3>
+                <p class="text-slate-400 text-sm">One-click PDF or XLSX export with verification hashes. Portable evidence that works outside EvidenceVault — zero lock-in.</p>
+            </div>
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 feature-card transition">
+                <div class="text-3xl mb-3">🏗️</div>
+                <h3 class="text-white font-semibold mb-2">Multi-Framework</h3>
+                <p class="text-slate-400 text-sm">SOC 2, ISO 27001, HIPAA, SOC 3 — map evidence to multiple frameworks. Upload once, use everywhere.</p>
+            </div>
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 feature-card transition">
+                <div class="text-3xl mb-3">🐳</div>
+                <h3 class="text-white font-semibold mb-2">Self-Hosted</h3>
+                <p class="text-slate-400 text-sm">Docker deployment on your infrastructure. Your evidence data never touches our servers. Full data sovereignty.</p>
+            </div>
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 feature-card transition">
+                <div class="text-3xl mb-3">🔌</div>
+                <h3 class="text-white font-semibold mb-2">API-First</h3>
+                <p class="text-slate-400 text-sm">Upload evidence, trigger reviews, and export proofpacks programmatically. REST API with language SDKs.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Comparison -->
+<section class="py-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl md:text-4xl font-bold text-white text-center mb-4">EvidenceVault vs. The Alternatives</h2>
+        <p class="text-slate-400 text-center mb-12 max-w-2xl mx-auto">Spreadsheets feel free until your auditor asks for review history. Enterprise tools cost more than your rent.</p>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="text-left py-4 px-4 text-slate-400 font-medium"></th>
+                        <th class="text-center py-4 px-4 text-white font-semibold bg-blue-600/10 rounded-t-xl">EvidenceVault</th>
+                        <th class="text-center py-4 px-4 text-slate-400 font-medium">Spreadsheets</th>
+                        <th class="text-center py-4 px-4 text-slate-400 font-medium">Vanta / Drata</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="border-b border-slate-800">
+                        <td class="py-4 px-4 text-slate-300">Starting Price</td>
+                        <td class="text-center py-4 px-4 text-white font-semibold">$49/mo</td>
+                        <td class="text-center py-4 px-4 text-slate-500">Free (40+ hrs labor)</td>
+                        <td class="text-center py-4 px-4 text-slate-500">$600-1,500/mo</td>
+                    </tr>
+                    <tr class="border-b border-slate-800">
+                        <td class="py-4 px-4 text-slate-300">Audit Trail</td>
+                        <td class="text-center py-4 px-4"><span class="comparison-check text-lg">✓</span> <span class="text-slate-300">Deterministic hashes</span></td>
+                        <td class="text-center py-4 px-4"><span class="comparison-x text-lg">✗</span> <span class="text-slate-500">Manual</span></td>
+                        <td class="text-center py-4 px-4"><span class="comparison-check text-lg">✓</span> <span class="text-slate-500">Built-in</span></td>
+                    </tr>
+                    <tr class="border-b border-slate-800">
+                        <td class="py-4 px-4 text-slate-300">Proofpack Export</td>
+                        <td class="text-center py-4 px-4"><span class="comparison-check text-lg">✓</span> <span class="text-slate-300">One-click</span></td>
+                        <td class="text-center py-4 px-4"><span class="comparison-x text-lg">✗</span> <span class="text-slate-500">Manual copy</span></td>
+                        <td class="text-center py-4 px-4"><span class="comparison-check text-lg">✓</span> <span class="text-slate-500">Export</span></td>
+                    </tr>
+                    <tr class="border-b border-slate-800">
+                        <td class="py-4 px-4 text-slate-300">Time to Value</td>
+                        <td class="text-center py-4 px-4 text-slate-300 font-medium">15 minutes</td>
+                        <td class="text-center py-4 px-4 text-slate-500">Setup time</td>
+                        <td class="text-center py-4 px-4 text-slate-500">2-4 weeks</td>
+                    </tr>
+                    <tr>
+                        <td class="py-4 px-4 text-slate-300">Self-Hosted</td>
+                        <td class="text-center py-4 px-4"><span class="comparison-check text-lg">✓</span> <span class="text-slate-300">Docker</span></td>
+                        <td class="text-center py-4 px-4"><span class="comparison-check text-lg">✓</span> <span class="text-slate-500">Local file</span></td>
+                        <td class="text-center py-4 px-4"><span class="comparison-x text-lg">✗</span> <span class="text-slate-500">Cloud only</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- Pricing -->
+<section id="pricing" class="bg-slate-800/50 py-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl md:text-4xl font-bold text-white text-center mb-4">Simple Pricing</h2>
+        <p class="text-slate-400 text-center mb-12 max-w-xl mx-auto">Start free. Upgrade when you need more. No hidden fees, no forced contracts.</p>
+        <div class="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <!-- Starter -->
+            <div class="bg-slate-800 rounded-2xl border border-slate-700 p-8 flex flex-col">
+                <h3 class="text-lg font-semibold text-white mb-1">Starter</h3>
+                <p class="text-sm text-slate-400 mb-6">For small teams getting started with compliance evidence.</p>
+                <div class="mb-6">
+                    <span class="text-4xl font-extrabold text-white">$49</span>
+                    <span class="text-slate-400">/month</span>
+                </div>
+                <ul class="space-y-3 mb-8 flex-1">
+                    <li class="flex items-center gap-2 text-sm text-slate-300"><span class="text-green-400">✓</span> 5 controls, 50 evidence items</li>
+                    <li class="flex items-center gap-2 text-sm text-slate-300"><span class="text-green-400">✓</span> 1 workspace</li>
+                    <li class="flex items-center gap-2 text-sm text-slate-300"><span class="text-green-400">✓</span> Weekly review snapshots</li>
+                    <li class="flex items-center gap-2 text-sm text-slate-300"><span class="text-green-400">✓</span> Proofpack export</li>
+                    <li class="flex items-center gap-2 text-sm text-slate-300"><span class="text-green-400">✓</span> Email support</li>
+                </ul>
+                <a href="#cta" class="block text-center border border-slate-600 hover:border-blue-500 text-white font-medium rounded-lg py-3 transition">Start Free Trial</a>
+            </div>
+            <!-- Growth (Popular) -->
+            <div class="bg-slate-800 rounded-2xl border-2 border-blue-500 p-8 flex flex-col relative">
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-semibold px-4 py-1 rounded-full">Most Popular</div>
+                <h3 class="text-lg font-semibold text-white mb-1">Growth</h3>
+                <p class="text-sm text-slate-400 mb-6">For growing teams managing multiple frameworks.</p>
+                <div class="mb-6">
+                    <span class="text-4xl font-extrabold text-white">$199</span>
+                    <span class="text-slate-400">/month</span>
+                </div>
+                <ul class="space-y-3 mb-8 flex-1">
+                    <li class="flex items-center gap-2 text-sm text-slate-300"><span class="text-green-400">✓</span> Unlimited controls, 500 evidence</li>
+                    <li class="flex items-center gap-2 text-sm text-slate-300"><span class="text-green-400">✓</span> 5 workspaces</li>
+                    <li class="flex items-center gap-2 text-sm text-slate-300"><span class="text-green-400">✓</span> API access</li>
+                    <li class="flex items-center gap-2 text-sm text-slate-300"><span class="text-green-400">✓</span> Multi-framework (SOC 2 + ISO 27001)</li>
+                    <li class="flex items-center gap-2 text-sm text-slate-300"><span class="text-green-400">✓</span> Priority email support</li>
+                </ul>
+                <a href="#cta" class="block text-center bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg py-3 transition shadow-lg shadow-blue-600/25">Start Free Trial</a>
+            </div>
+            <!-- Enterprise -->
+            <div class="bg-slate-800 rounded-2xl border border-slate-700 p-8 flex flex-col">
+                <h3 class="text-lg font-semibold text-white mb-1">Enterprise</h3>
+                <p class="text-sm text-slate-400 mb-6">For organizations with dedicated compliance teams.</p>
+                <div class="mb-6">
+                    <span class="text-4xl font-extrabold text-white">Custom</span>
+                </div>
+                <ul class="space-y-3 mb-8 flex-1">
+                    <li class="flex items-center gap-2 text-sm text-slate-300"><span class="text-green-400">✓</span> Self-hosted deployment</li>
+                    <li class="flex items-center gap-2 text-sm text-slate-300"><span class="text-green-400">✓</span> Unlimited everything</li>
+                    <li class="flex items-center gap-2 text-sm text-slate-300"><span class="text-green-400">✓</span> SSO / SAML</li>
+                    <li class="flex items-center gap-2 text-sm text-slate-300"><span class="text-green-400">✓</span> SLA commitment</li>
+                    <li class="flex items-center gap-2 text-sm text-slate-300"><span class="text-green-400">✓</span> Dedicated support</li>
+                </ul>
+                <a href="#cta" class="block text-center border border-slate-600 hover:border-slate-500 text-white font-medium rounded-lg py-3 transition">Contact Sales</a>
+            </div>
+        </div>
+        <p class="text-center text-sm text-slate-500 mt-8">All plans include a 14-day free trial. No credit card required.</p>
+    </div>
+</section>
+
+<!-- Pilot -->
+<section class="py-16 bg-gradient-to-br from-blue-900/20 via-slate-900 to-purple-900/20 border-y border-slate-800">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <span class="text-xs font-semibold text-blue-400 uppercase tracking-widest">NEW</span>
+        <h2 class="text-2xl md:text-3xl font-bold text-white mt-2 mb-4">Try EvidenceVault Risk-Free</h2>
+        <p class="text-slate-400 mb-8">Our 4-week pilot program includes setup support, weekly check-ins, and a success review — all credited toward your first year. You'll know exactly how much time you save before you commit.</p>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-slate-400">
+            <div class="flex items-center gap-2"><span class="text-blue-400">✓</span> Dedicated setup call</div>
+            <div class="flex items-center gap-2"><span class="text-blue-400">✓</span> Weekly progress check-ins</div>
+            <div class="flex items-center gap-2"><span class="text-blue-400">✓</span> $500 credited toward first year</div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="py-20">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl font-bold text-white text-center mb-12">Frequently Asked Questions</h2>
+        <div class="space-y-4">
+            <details class="bg-slate-800 rounded-xl border border-slate-700 open:border-blue-500/50 transition group">
+                <summary class="px-6 py-4 text-white font-medium cursor-pointer flex items-center justify-between group-open:text-blue-400">How is this different from Vanta or Drata?</summary>
+                <div class="px-6 pb-4 text-sm text-slate-400 leading-relaxed">We're built for smaller teams. Vanta and Drata are full GRC platforms designed for enterprises — they start at $600-1,500/mo and take 2-4 weeks to set up. EvidenceVault focuses on the evidence lifecycle: upload, review, export. Most teams go from signup to first proofpack in under 15 minutes. At $49/mo, we're 10x more accessible.</div>
+            </details>
+            <details class="bg-slate-800 rounded-xl border border-slate-700 open:border-blue-500/50 transition group">
+                <summary class="px-6 py-4 text-white font-medium cursor-pointer flex items-center justify-between group-open:text-blue-400">Can I self-host EvidenceVault?</summary>
+                <div class="px-6 pb-4 text-sm text-slate-400 leading-relaxed">Yes. EvidenceVault runs as a Docker container. Deploy on your own infrastructure — AWS, GCP, Azure, or on-prem. Your evidence data never touches our servers. The Enterprise tier includes self-hosted deployment with SLA and dedicated support.</div>
+            </details>
+            <details class="bg-slate-800 rounded-xl border border-slate-700 open:border-blue-500/50 transition group">
+                <summary class="px-6 py-4 text-white font-medium cursor-pointer flex items-center justify-between group-open:text-blue-400">What compliance frameworks do you support?</summary>
+                <div class="px-6 pb-4 text-sm text-slate-400 leading-relaxed">SOC 2 (all trust service criteria), ISO 27001, HIPAA, SOC 3, and custom frameworks. Map evidence items to multiple frameworks simultaneously — upload once, use everywhere. New frameworks are added based on customer demand.</div>
+            </details>
+            <details class="bg-slate-800 rounded-xl border border-slate-700 open:border-blue-500/50 transition group">
+                <summary class="px-6 py-4 text-white font-medium cursor-pointer flex items-center justify-between group-open:text-blue-400">What if I need to cancel? Do I lose my evidence?</summary>
+                <div class="px-6 pb-4 text-sm text-slate-400 leading-relaxed">Never. Export your proofpack anytime — it's a portable PDF or XLSX with verification hashes that works outside EvidenceVault. Your evidence is yours, not locked in our platform. Cancel anytime, no questions asked.</div>
+            </details>
+            <details class="bg-slate-800 rounded-xl border border-slate-700 open:border-blue-500/50 transition group">
+                <summary class="px-6 py-4 text-white font-medium cursor-pointer flex items-center justify-between group-open:text-blue-400">How long does setup take?</summary>
+                <div class="px-6 pb-4 text-sm text-slate-400 leading-relaxed">Most teams upload their first evidence item in under 5 minutes. Setup: create an account, define your controls, start uploading. For our pilot program, we'll get you fully set up in a 30-minute kickoff call. No training required.</div>
+            </details>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section id="cta" class="gradient-bg py-20 border-t border-slate-800">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Stop Scrambling Before Every Audit</h2>
+        <p class="text-lg text-slate-400 mb-10 max-w-xl mx-auto">Evidence collection should take minutes, not weeks. Start your free trial or book a pilot — no pressure, no tricks.</p>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a href="#" onclick="alert('EvidenceVault free trial signup — coming soon. Contact scott@hardonian.com to start your pilot today.')" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-8 py-3.5 rounded-lg text-lg transition shadow-lg shadow-blue-600/25">Start 14-Day Free Trial</a>
+            <a href="#" onclick="alert('EvidenceVault pilot inquiry. Email scott@hardonian.com. We\'ll respond within 24 hours.')" class="border border-slate-700 hover:border-blue-500/50 text-slate-300 font-medium px-8 py-3.5 rounded-lg text-lg transition">Book a Pilot →</a>
+        </div>
+        <p class="text-sm text-slate-500 mt-6">No credit card required. 14-day free trial. 4-week pilot available.</p>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="border-t border-slate-800 py-8">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-500">
+            <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded gradient-accent flex items-center justify-center text-white font-bold text-xs">EV</div>
+                <span>EvidenceVault</span>
+            </div>
+            <div class="flex items-center gap-6">
+                <a href="#problem" class="hover:text-slate-300 transition">Problem</a>
+                <a href="#features" class="hover:text-slate-300 transition">Features</a>
+                <a href="#pricing" class="hover:text-slate-300 transition">Pricing</a>
+                <a href="#faq" class="hover:text-slate-300 transition">FAQ</a>
+            </div>
+            <p>© 2026 Hardonian. Built with reality mode.</p>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>
