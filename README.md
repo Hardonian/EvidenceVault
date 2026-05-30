@@ -3,7 +3,7 @@
 EvidenceVault is a deterministic compliance-operations system for small teams that need auditable continuity, weekly review discipline, and portable proof exports.
 
 Purpose: Top-level product and repository truth.
-Audience: Foundors, operators, contributors, evaluators.
+Audience: Founders, operators, contributors, evaluators.
 Canonical status: Authoritative for what is currently implemented in this repository.
 
 ## Implemented Product Truth

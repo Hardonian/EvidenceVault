@@ -50,7 +50,7 @@ type Edge struct {
 	Type           string         `json:"type"`
 	SourceID       string         `json:"sourceId"`
 	TargetID       string         `json:"targetId"`
-	TenantID        string         `json:"tenantId"`
+	TenantID       string         `json:"tenantId"`
 	Reason         string         `json:"reason"`
 	EvidenceSource string         `json:"evidenceSource"`
 	Confidence     string         `json:"confidence"`
@@ -551,7 +551,9 @@ func applyCaps(g Graph, maxNodes, maxEdges int, now time.Time) Graph {
 
 func sortTenantData(d *TenantData) {
 	sort.SliceStable(d.Proofpacks, func(i, j int) bool { return d.Proofpacks[i].CreatedAt.After(d.Proofpacks[j].CreatedAt) })
-	sort.SliceStable(d.ReviewSnapshots, func(i, j int) bool { return d.ReviewSnapshots[i].LastReviewedAt.After(d.ReviewSnapshots[j].LastReviewedAt) })
+	sort.SliceStable(d.ReviewSnapshots, func(i, j int) bool {
+		return d.ReviewSnapshots[i].LastReviewedAt.After(d.ReviewSnapshots[j].LastReviewedAt)
+	})
 	sort.SliceStable(d.OperationalEvents, func(i, j int) bool { return d.OperationalEvents[i].CreatedAt.After(d.OperationalEvents[j].CreatedAt) })
 	sort.SliceStable(d.ReviewReports, func(i, j int) bool { return d.ReviewReports[i].GeneratedAt.After(d.ReviewReports[j].GeneratedAt) })
 }
@@ -672,14 +674,18 @@ func ownerNode(it evidence.Item) (string, string, bool) {
 	return typedNodeID("owner", key), label, true
 }
 
-func tenantNodeID(id string) string { return "tenant:" + slug(id) }
-func evidenceNodeID(id string) string { return "evidence:" + slug(id) }
-func proofpackNodeID(id string) string { return "proofpack:" + slug(id) }
+func tenantNodeID(id string) string        { return "tenant:" + slug(id) }
+func evidenceNodeID(id string) string      { return "evidence:" + slug(id) }
+func proofpackNodeID(id string) string     { return "proofpack:" + slug(id) }
 func typedNodeID(typ, label string) string { return typ + ":" + slug(label) }
-func actionNodeID(id string) string { return "action:" + slug(id) }
-func actionID(typ, target string) string { return typ + ":" + slug(target) }
-func edgeID(typ, source, target string) string { return "edge:" + slug(typ) + ":" + slug(source) + ":" + slug(target) }
-func snapshotNodeID(t time.Time, i int) string { return fmt.Sprintf("snapshot:review:%s:%d", t.Format("20060102T150405"), i) }
+func actionNodeID(id string) string        { return "action:" + slug(id) }
+func actionID(typ, target string) string   { return typ + ":" + slug(target) }
+func edgeID(typ, source, target string) string {
+	return "edge:" + slug(typ) + ":" + slug(source) + ":" + slug(target)
+}
+func snapshotNodeID(t time.Time, i int) string {
+	return fmt.Sprintf("snapshot:review:%s:%d", t.Format("20060102T150405"), i)
+}
 
 func slug(v string) string {
 	v = strings.ToLower(strings.TrimSpace(v))

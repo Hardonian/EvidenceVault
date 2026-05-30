@@ -2,18 +2,19 @@
 set -euo pipefail
 go build -o /tmp/ev ./cmd/server
 pkill -f '/tmp/ev' >/dev/null 2>&1 || true
-CRON_SECRET=secret ADDR=:18080 PERSISTENCE_MODE=memory /tmp/ev >/tmp/ev.log 2>&1 &
+AUTH_HEADERS=(-H 'X-Tenant-ID: pilot-demo' -H 'X-User-ID: smoke-user')
+CRON_SECRET=secret APP_ENV=development DEMO_MODE=true ADDR=:18080 PERSISTENCE_MODE=memory /tmp/ev >/tmp/ev.log 2>&1 &
 PID=$!
 trap 'kill $PID 2>/dev/null || true' EXIT
 sleep 1
 curl -fsS http://127.0.0.1:18080/healthz >/dev/null
-curl -fsS http://127.0.0.1:18080/app/api/evidence-graph >/dev/null
+curl -fsS "${AUTH_HEADERS[@]}" http://127.0.0.1:18080/app/api/evidence-graph >/dev/null
 kill $PID; wait $PID || true
 DATA_DIR=$(mktemp -d)
-CRON_SECRET=secret ADDR=:18081 PERSISTENCE_MODE=file DATA_DIR=$DATA_DIR /tmp/ev >/tmp/ev2.log 2>&1 &
+CRON_SECRET=secret APP_ENV=development DEMO_MODE=true ADDR=:18081 PERSISTENCE_MODE=file DATA_DIR=$DATA_DIR /tmp/ev >/tmp/ev2.log 2>&1 &
 PID2=$!
 trap 'kill $PID2 2>/dev/null || true' EXIT
 sleep 1
 curl -fsS http://127.0.0.1:18081/readyz >/dev/null
-curl -fsS http://127.0.0.1:18081/app/export/evidence-graph.md >/dev/null
+curl -fsS "${AUTH_HEADERS[@]}" http://127.0.0.1:18081/app/export/evidence-graph.md >/dev/null
 kill $PID2; wait $PID2 || true

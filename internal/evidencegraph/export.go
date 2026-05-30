@@ -14,6 +14,7 @@ func Markdown(g Graph) string {
 	b.WriteString("- Tenant: " + g.TenantID + "\n")
 	b.WriteString("- Graph version: " + g.GraphVersion + "\n\n")
 	writeSummary(&b, g)
+	writeDegradedState(&b, g)
 	writeList(&b, "Degraded Reasons", g.DegradedReasons, "No degraded graph inputs detected.")
 	writeList(&b, "Top Risks", g.Summary.TopRisks, "No explicit risk references or critical gaps detected.")
 	writeActions(&b, g.NextActions)
@@ -63,6 +64,17 @@ func writeSummary(b *strings.Builder, g Graph) {
 	b.WriteString("- Proofpacks: " + itoa(g.Summary.ProofpackCount) + "\n")
 	b.WriteString("- Reviews: " + itoa(g.Summary.ReviewCount) + "\n")
 	b.WriteString("- Comparison state: " + g.Summary.ComparisonState + "\n\n")
+}
+
+func writeDegradedState(b *strings.Builder, g Graph) {
+	b.WriteString("## Degraded State\n\n")
+	if len(g.DegradedReasons) == 0 {
+		b.WriteString("- State: healthy\n")
+		b.WriteString("- Summary: No degraded graph inputs detected.\n\n")
+		return
+	}
+	b.WriteString("- State: degraded\n")
+	b.WriteString("- Summary: Explicit degraded inputs are present and called out below.\n\n")
 }
 
 func writeList(b *strings.Builder, title string, values []string, empty string) {

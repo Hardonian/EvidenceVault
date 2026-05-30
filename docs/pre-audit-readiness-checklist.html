@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EvidenceVault — Pre-Audit Readiness Checklist</title>
+  <meta name="description" content="A practical pre-audit readiness checklist for small teams preparing evidence for SOC 2, ISO 27001, HIPAA, or customer security reviews.">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; line-height: 1.6; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 32px 20px 80px; }
+    .eyebrow { color: #60a5fa; text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.75rem; font-weight: 700; }
+    h1 { font-size: 2.5rem; line-height: 1.1; margin: 12px 0 16px; }
+    h2 { margin-top: 40px; font-size: 1.4rem; color: white; }
+    p, li { color: #cbd5e1; }
+    .lede { font-size: 1.1rem; max-width: 48rem; }
+    .card { background: #111827; border: 1px solid #334155; border-radius: 16px; padding: 24px; margin-top: 24px; }
+    .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+    .btn { display: inline-block; text-decoration: none; border-radius: 10px; padding: 12px 18px; font-weight: 600; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-secondary { border: 1px solid #475569; color: #e2e8f0; }
+    ul, ol { padding-left: 20px; }
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .pill { display: inline-block; font-size: 0.8rem; padding: 4px 10px; border-radius: 999px; background: #1e293b; color: #93c5fd; margin-right: 8px; }
+    .footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid #334155; font-size: 0.95rem; color: #94a3b8; }
+    a { color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="eyebrow">EvidenceVault lead magnet</div>
+    <h1>Pre-Audit Readiness Checklist</h1>
+    <p class="lede">Use this checklist before a SOC 2, ISO 27001, HIPAA, or enterprise security review. It is built for small teams that need operator truth, not compliance theatre.</p>
+
+    <div class="card">
+      <span class="pill">Who it is for</span>
+      <span class="pill">Founders</span>
+      <span class="pill">Security / Compliance</span>
+      <span class="pill">Ops</span>
+      <div class="cta">
+        <a class="btn btn-primary" href="pricing.html">See pricing</a>
+        <a class="btn btn-secondary" href="mailto:scott@hardonian.com?subject=EvidenceVault%20Checklist%20Follow-up">Ask for a guided pilot</a>
+      </div>
+    </div>
+
+    <h2>1. Evidence inventory</h2>
+    <div class="card">
+      <ul>
+        <li>List every control, policy, vendor artifact, and operating record the audit or customer review will request.</li>
+        <li>Give each evidence item a clear owner, renewal cadence, and current status.</li>
+        <li>Mark anything ownerless, expired, or older than one review cycle.</li>
+      </ul>
+    </div>
+
+    <h2>2. Retrieval path</h2>
+    <div class="card">
+      <ul>
+        <li>Confirm where each file actually lives today: shared drive, ticketing system, HR system, cloud console export, or contract repository.</li>
+        <li>Remove duplicates and note the single canonical source for each artifact.</li>
+        <li>Check that the file can be exported again without relying on one person’s memory.</li>
+      </ul>
+    </div>
+
+    <h2>3. Review discipline</h2>
+    <div class="card">
+      <ul>
+        <li>Set a weekly review rhythm for open gaps, upcoming expirations, and ownerless evidence.</li>
+        <li>Log what changed, what was renewed, and what remains blocked.</li>
+        <li>Keep the review output portable so you can show progress over time.</li>
+      </ul>
+    </div>
+
+    <h2>4. Export readiness</h2>
+    <div class="card">
+      <ul>
+        <li>Verify you can export a clean evidence graph or summary without copy-pasting from six systems.</li>
+        <li>Make sure the export includes timestamps, owners, and unresolved gaps.</li>
+        <li>Test the export before the audit week, not during it.</li>
+      </ul>
+    </div>
+
+    <h2>5. Customer questionnaire readiness</h2>
+    <div class="card">
+      <ul>
+        <li>Prepare a lightweight bundle for enterprise buyers who ask for proof of controls.</li>
+        <li>Map recurring questionnaire topics to existing evidence so the sales team is not rebuilding answers from scratch.</li>
+        <li>Keep a short narrative for what is complete, what is in progress, and what is intentionally out of scope.</li>
+      </ul>
+    </div>
+
+    <h2>6. Minimum operating bar</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>No ownerless evidence</h3>
+        <p>If nobody owns it, it will break during the next audit cycle.</p>
+      </div>
+      <div class="card">
+        <h3>No silent expiry</h3>
+        <p>Every expiring artifact needs a visible reminder and follow-up path.</p>
+      </div>
+      <div class="card">
+        <h3>No fake exports</h3>
+        <p>Only promise the formats and workflows the product actually supports today.</p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>Need help turning this into an actual weekly system? EvidenceVault is built to track evidence, owners, reviews, and portable exports without enterprise GRC overhead.</p>
+      <p><a href="index.html">← Back to EvidenceVault</a></p>
+    </div>
+  </div>
+</body>
+</html>

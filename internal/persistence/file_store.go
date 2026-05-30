@@ -74,7 +74,7 @@ func (f *FileStore) persistLocked() error {
 		}
 		tmp := filepath.Join(f.dir, n+".tmp")
 		final := filepath.Join(f.dir, n)
-		
+
 		file, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 		if err != nil {
 			return err

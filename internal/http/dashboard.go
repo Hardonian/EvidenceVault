@@ -35,13 +35,13 @@ type DashboardViewModel struct {
 	StarterTemplates                                                    []TemplateCard
 	PriorityQueue                                                       []PriorityItem
 	// Evidence Graph fields
-	GraphReadinessScore int
-	GraphHealth         string
+	GraphReadinessScore  int
+	GraphHealth          string
 	GraphDegradedReasons []string
-	GraphNextActions    []evidencegraph.NextAction
-	GraphNodeCount      int
-	GraphEdgeCount      int
-	GraphAvailable      bool
+	GraphNextActions     []evidencegraph.NextAction
+	GraphNodeCount       int
+	GraphEdgeCount       int
+	GraphAvailable       bool
 }
 
 func calculateItemCounts(items []evidence.Item) (int, int, int) {
