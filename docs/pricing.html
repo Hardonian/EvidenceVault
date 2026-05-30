@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EvidenceVault — Pricing</title>
+  <meta name="description" content="Simple, transparent pricing for compliance evidence automation. Start at $49/mo.">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #fbfcf8; color: #171915; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+    header { padding: 48px 0 24px; }
+    h1 { font-size: 2.5rem; font-weight: 700; letter-spacing: -0.02em; }
+    h2 { font-size: 1.25rem; font-weight: 600; color: #52604e; margin-bottom: 32px; }
+    .subtitle { font-size: 1.1rem; color: #52604e; margin-top: 8px; }
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin: 40px 0; }
+    .card { border: 1px solid #d7dccf; background: white; padding: 32px; border-radius: 8px; }
+    .card.featured { border: 2px solid #426b51; position: relative; }
+    .card.featured::before { content: 'POPULAR'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #426b51; color: white; padding: 4px 16px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; border-radius: 4px; }
+    .card h3 { font-size: 1.3rem; font-weight: 600; }
+    .card .price { font-size: 2.5rem; font-weight: 700; margin: 16px 0 4px; }
+    .card .price span { font-size: 1rem; font-weight: 400; color: #61705a; }
+    .card .description { color: #52604e; font-size: 0.9rem; min-height: 48px; }
+    .card ul { list-style: none; margin: 24px 0; }
+    .card li { padding: 8px 0; border-bottom: 1px solid #edf0e8; font-size: 0.9rem; }
+    .card li::before { content: '✓ '; color: #426b51; font-weight: 700; }
+    .btn { display: block; width: 100%; padding: 14px; text-align: center; font-size: 1rem; font-weight: 600; border-radius: 6px; cursor: pointer; }
+    .btn-primary { background: #426b51; color: white; border: none; }
+    .btn-primary:hover { background: #2d6a4f; }
+    .btn-outline { background: white; color: #171915; border: 1px solid #c5cdbb; }
+    .btn-outline:hover { background: #f5f7f0; }
+    .faq { margin: 48px 0 80px; }
+    .faq h2 { margin-bottom: 24px; }
+    .faq-item { border-bottom: 1px solid #d7dccf; padding: 20px 0; }
+    .faq-item h4 { font-weight: 600; margin-bottom: 4px; }
+    .faq-item p { color: #52604e; font-size: 0.9rem; }
+    footer { border-top: 1px solid #d7dccf; padding: 24px 0; text-align: center; color: #61705a; font-size: 0.85rem; }
+    a { color: #426b51; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <p style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.12em;color:#61705a;font-weight:600;">EvidenceVault</p>
+      <h1>Simple, transparent pricing</h1>
+      <p class="subtitle">Compliance evidence automation for teams of any size. No hidden fees, no enterprise tax for small teams.</p>
+    </header>
+
+    <div class="pricing-grid">
+      <div class="card">
+        <h3>SMB</h3>
+        <div class="price">$49<span>/month</span></div>
+        <p class="description">For small teams getting started with compliance evidence management.</p>
+        <ul>
+          <li>Up to 5 evidence frameworks</li>
+          <li>Weekly review snapshots</li>
+          <li>Evidence Graph generation</li>
+          <li>Proofpack exports (PDF, JSON, Markdown)</li>
+          <li>Up to 5 team members</li>
+          <li>Email support</li>
+        </ul>
+        <a href="https://buy.stripe.com/14AdR8czS5dO8oW42lb3q00" class="btn btn-primary" target="_blank">Subscribe — $49/mo</a>
+      </div>
+
+      <div class="card featured">
+        <h3>Team</h3>
+        <div class="price">$199<span>/month</span></div>
+        <p class="description">For growing teams that need collaboration and advanced features.</p>
+        <ul>
+          <li>Unlimited evidence frameworks</li>
+          <li>Automated weekly snapshots</li>
+          <li>Evidence Graph + full dependency mapping</li>
+          <li>Proofpack exports + custom templates</li>
+          <li>Up to 25 team members</li>
+          <li>Priority email + chat support</li>
+          <li>4-week pilot program available</li>
+        </ul>
+        <a href="https://buy.stripe.com/3cIfZg0Ra8q0fRo0Q9b3q01" class="btn btn-primary" target="_blank">Subscribe — $199/mo</a>
+      </div>
+
+      <div class="card">
+        <h3>Business</h3>
+        <div class="price">$499<span>/month</span></div>
+        <p class="description">For organizations with advanced compliance requirements.</p>
+        <ul>
+          <li>Everything in Team, plus:</li>
+          <li>Unlimited team members</li>
+          <li>Multi-tenant evidence management</li>
+          <li>Custom integration support</li>
+          <li>SSO/SAML</li>
+          <li>Dedicated support + onboarding</li>
+          <li>SLA guarantee</li>
+        </ul>
+        <a href="https://buy.stripe.com/5kQeVc7fy9u448G6atb3q02" class="btn btn-primary" target="_blank">Subscribe — $499/mo</a>
+      </div>
+    </div>
+
+    <div class="faq">
+      <h2>Frequently asked questions</h2>
+      <div class="faq-item">
+        <h4>What payment methods do you accept?</h4>
+        <p>All major credit cards, debit cards, and Apple Pay/Google Pay via Stripe.</p>
+      </div>
+      <div class="faq-item">
+        <h4>Can I cancel anytime?</h4>
+        <p>Yes. Cancel from your dashboard at any time. No long-term contracts. If you cancel, you keep access until the end of your billing period.</p>
+      </div>
+      <div class="faq-item">
+        <h4>Is there a free trial?</h4>
+        <p>Yes — contact us for a 14-day free trial with full access. No credit card required for evaluation.</p>
+      </div>
+      <div class="faq-item">
+        <h4>How is evidence data stored?</h4>
+        <p>All evidence is deterministically hashed and stored with full audit trails. You control your data — self-hosted option available for enterprise customers.</p>
+      </div>
+      <div class="faq-item">
+        <h4>Can I upgrade/downgrade?</h4>
+        <p>Yes — upgrade or downgrade at any time. Credits are applied automatically.</p>
+      </div>
+    </div>
+
+    <footer>
+      <p><a href="index.html">← EvidenceVault Home</a> &middot; Questions? <a href="mailto:scott@hardonian.com">scott@hardonian.com</a></p>
+    </footer>
+  </div>
+</body>
+</html>
