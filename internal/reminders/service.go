@@ -21,18 +21,22 @@ func NewService(store persistence.Store, sender email.Sender, auditSvc *audit.Se
 	return &Service{store: store, evidence: ev, email: sender, audit: auditSvc}
 }
 func (s *Service) Run(ctx context.Context) (int, error) {
-	items := s.evidence.All()
-	sent := 0
-	today := time.Now().UTC().Format("2006-01-02")
-	toSend := make([]evidence.Item, 0, len(items))
 	nowUTC := time.Now().UTC()
-	for _, it := range items {
+	items := s.evidence.All(func(it evidence.Item) bool {
 		if it.OwnerEmail == "" || it.ExpiryDate == nil {
-			continue
+			return false
 		}
 		if it.ExpiryDate.UTC().Before(nowUTC) || it.ExpiryDate.UTC().After(nowUTC.AddDate(0, 0, it.ReminderDaysBefore)) {
-			continue
+			return false
 		}
+		return true
+	})
+
+	sent := 0
+	today := nowUTC.Format("2006-01-02")
+	toSend := make([]evidence.Item, 0, len(items))
+
+	for _, it := range items {
 		k := it.ID + ":" + today
 		dup := false
 		_ = s.store.Write(func(st *persistence.State) error {
