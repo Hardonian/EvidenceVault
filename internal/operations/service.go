@@ -363,15 +363,27 @@ func evaluateItem(it evidence.Item, now time.Time, s *Summary, o *OwnerSummary) 
 	}
 }
 
+type ownerKey struct {
+	email string
+	name  string
+}
+
 func evaluate(items []evidence.Item, now time.Time) Summary {
 	s := Summary{HealthScore: 100}
-	owners := map[string]*OwnerSummary{}
-	for _, it := range items {
-		key := strings.TrimSpace(it.OwnerEmail) + "|" + strings.TrimSpace(it.OwnerName)
-		if _, ok := owners[key]; !ok {
-			owners[key] = &OwnerSummary{OwnerName: it.OwnerName, OwnerEmail: it.OwnerEmail}
+	owners := make(map[ownerKey]*OwnerSummary)
+	for i := range items {
+		it := items[i]
+		key := ownerKey{
+			email: strings.TrimSpace(it.OwnerEmail),
+			name:  strings.TrimSpace(it.OwnerName),
 		}
-		evaluateItem(it, now, &s, owners[key])
+
+		o := owners[key]
+		if o == nil {
+			o = &OwnerSummary{OwnerName: it.OwnerName, OwnerEmail: it.OwnerEmail}
+			owners[key] = o
+		}
+		evaluateItem(it, now, &s, o)
 	}
 	if s.HealthScore < 0 {
 		s.HealthScore = 0
