@@ -521,30 +521,47 @@ func graphHealth(now time.Time, items []evidence.Item, data TenantData) int {
 
 func applyCaps(g Graph, maxNodes, maxEdges int, now time.Time) Graph {
 	originalNodes, originalEdges := len(g.Nodes), len(g.Edges)
+
 	if maxNodes > 0 && len(g.Nodes) > maxNodes {
-		kept := map[string]struct{}{}
-		g.Nodes = append([]Node{}, g.Nodes[:maxNodes]...)
-		for _, n := range g.Nodes {
-			kept[n.ID] = struct{}{}
+		kept := make(map[string]struct{}, maxNodes)
+
+		g.Nodes = g.Nodes[:maxNodes]
+		for i := 0; i < maxNodes; i++ {
+			kept[g.Nodes[i].ID] = struct{}{}
 		}
-		var edges []Edge
-		for _, e := range g.Edges {
-			if _, ok := kept[e.SourceID]; !ok {
+
+		var k int
+		for i := 0; i < len(g.Edges); i++ {
+			if _, ok := kept[g.Edges[i].SourceID]; !ok {
 				continue
 			}
-			if _, ok := kept[e.TargetID]; !ok {
+			if _, ok := kept[g.Edges[i].TargetID]; !ok {
 				continue
 			}
-			edges = append(edges, e)
+			g.Edges[k] = g.Edges[i]
+			k++
 		}
-		g.Edges = edges
-		g.Nodes = append(g.Nodes, Node{ID: "graph_cap:omitted_nodes", Type: "action", Label: "Graph output capped", TenantID: g.TenantID, Status: "degraded", CreatedAt: now, UpdatedAt: now, Summary: "Some nodes were omitted to keep graph output bounded.", Metadata: map[string]any{"omitted_nodes": originalNodes - maxNodes, "max_nodes": maxNodes}})
+		g.Edges = g.Edges[:k]
+
+		g.Nodes = append(g.Nodes, Node{
+			ID: "graph_cap:omitted_nodes",
+			Type: "action",
+			Label: "Graph output capped",
+			TenantID: g.TenantID,
+			Status: "degraded",
+			CreatedAt: now,
+			UpdatedAt: now,
+			Summary: "Some nodes were omitted to keep graph output bounded.",
+			Metadata: map[string]any{"omitted_nodes": originalNodes - maxNodes, "max_nodes": maxNodes},
+		})
 		g.DegradedReasons = append(g.DegradedReasons, fmt.Sprintf("Graph node output capped at %d of %d nodes.", maxNodes, originalNodes))
 	}
+
 	if maxEdges > 0 && len(g.Edges) > maxEdges {
-		g.Edges = append([]Edge{}, g.Edges[:maxEdges]...)
+		g.Edges = g.Edges[:maxEdges]
 		g.DegradedReasons = append(g.DegradedReasons, fmt.Sprintf("Graph edge output capped at %d of %d edges.", maxEdges, originalEdges))
 	}
+
 	sortGraph(&g)
 	return g
 }
