@@ -257,24 +257,34 @@ func (c ReviewComparison) Markdown() string {
 func (c ReviewComparison) PlainText() string { return strings.ReplaceAll(c.Markdown(), "- ", "* ") }
 
 func deriveStage(sum Summary, totalEvidence int) string {
-	has := func(key string) bool {
-		for _, m := range sum.ActivationChecklist {
-			if m.Key == key {
-				return m.ReachedAt != nil
-			}
-		}
-		return false
-	}
 	if sum.HealthScore >= 75 && totalEvidence >= 12 && len(sum.Owners) > 1 && len(sum.ProofpackHistory) >= 3 && sum.ReviewCompletionStreak >= 3 {
 		return "expansion-ready"
 	}
-	if has("second_weekly_review") {
+	var hasSecondWeeklyReview, hasFirstProofpackGenerated, hasFirstOperationalReview, hasFirstEvidenceCreated, hasFirstFileUploaded bool
+	for _, m := range sum.ActivationChecklist {
+		if m.ReachedAt == nil {
+			continue
+		}
+		switch m.Key {
+		case "second_weekly_review":
+			hasSecondWeeklyReview = true
+		case "first_proofpack_generated":
+			hasFirstProofpackGenerated = true
+		case "first_operational_review":
+			hasFirstOperationalReview = true
+		case "first_evidence_created":
+			hasFirstEvidenceCreated = true
+		case "first_file_uploaded":
+			hasFirstFileUploaded = true
+		}
+	}
+	if hasSecondWeeklyReview {
 		return "recurring"
 	}
-	if has("first_proofpack_generated") && has("first_operational_review") {
+	if hasFirstProofpackGenerated && hasFirstOperationalReview {
 		return "operational"
 	}
-	if has("first_evidence_created") && has("first_file_uploaded") {
+	if hasFirstEvidenceCreated && hasFirstFileUploaded {
 		return "activated"
 	}
 	return "exploring"
