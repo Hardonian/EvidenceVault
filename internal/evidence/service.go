@@ -184,9 +184,9 @@ func (s *Service) Update(_ context.Context, tenantID, idv string, it Item) error
 
 func normalizeRefs(refs []string) []string {
 	seen := map[string]struct{}{}
-	out := []string{}
+	out := make([]string, 0, len(refs))
 	for _, ref := range refs {
-		clean := strings.Join(strings.Fields(ref), " ")
+		clean := strings.TrimSpace(ref)
 		if clean == "" {
 			continue
 		}
