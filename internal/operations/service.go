@@ -109,60 +109,73 @@ func (s *Service) BuildSummary(ctx context.Context, tenantID string, items []evi
 	sum.NextRecommendedReview = now.AddDate(0, 0, 7)
 	sum.Cadence = []string{"Weekly operational review", "Monthly proofpack export", "Quarterly evidence audit"}
 	_ = s.store.Read(func(st *persistence.State) error {
-		if arr := st.ReviewSnapshots[tenantID]; len(arr) > 0 {
-			sum.LastReviewedAt = arr[0].LastReviewedAt
-			sum.NextRecommendedReview = arr[0].NextRecommendedReview
-		}
-		sum.ProofpackHistory = append([]persistence.ProofpackMeta{}, st.Proofpacks[tenantID]...)
-		for i, ev := range st.OperationalEvents[tenantID] {
-			if i == 0 {
-				sum.LastActivityAt = ev.CreatedAt
-			}
-			if i >= 8 {
-				break
-			}
-			sum.RecentActivity = append(sum.RecentActivity, Activity{Type: ev.Type, Message: ev.Message, EntityID: ev.EntityID, CreatedAt: ev.CreatedAt})
-		}
-		if arr := st.ReviewSnapshots[tenantID]; len(arr) > 1 {
-			sum.PreviousHealthScore = arr[1].HealthScore
-			sum.HealthDelta = sum.HealthScore - arr[1].HealthScore
-			sum.UnresolvedDelta = sum.Unresolved - arr[1].UnresolvedIssues
-		}
-		if arr := st.ReviewSnapshots[tenantID]; len(arr) > 0 {
-			sum.ReviewCompletionStreak = reviewStreak(arr)
-		}
-		a := st.Activation[tenantID]
-		sum.ActivationChecklist = []MilestoneState{
-			{Key: "first_evidence_created", Label: "First evidence created", ReachedAt: a.FirstEvidenceCreatedAt},
-			{Key: "first_file_uploaded", Label: "First file uploaded", ReachedAt: a.FirstFileUploadedAt},
-			{Key: "first_reminder_run", Label: "First reminder run", ReachedAt: a.FirstReminderRunAt},
-			{Key: "first_proofpack_generated", Label: "First proofpack generated", ReachedAt: a.FirstProofpackGeneratedAt},
-			{Key: "first_operational_review", Label: "First operational review", ReachedAt: a.FirstOperationalReviewAt},
-			{Key: "second_weekly_review", Label: "Second weekly review", ReachedAt: a.SecondWeeklyReviewAt},
-		}
+		populateSummaryFromState(st, tenantID, &sum)
 		return nil
 	})
+	sum.ActivationCompletionPercent = calculateActivationPercent(sum.ActivationChecklist)
+	s.populateDerivedSignals(tenantID, &sum, items, now)
+	return sum, nil
+}
+
+func populateSummaryFromState(st *persistence.State, tenantID string, sum *Summary) {
+	if arr := st.ReviewSnapshots[tenantID]; len(arr) > 0 {
+		sum.LastReviewedAt = arr[0].LastReviewedAt
+		sum.NextRecommendedReview = arr[0].NextRecommendedReview
+	}
+	sum.ProofpackHistory = append([]persistence.ProofpackMeta{}, st.Proofpacks[tenantID]...)
+	for i, ev := range st.OperationalEvents[tenantID] {
+		if i == 0 {
+			sum.LastActivityAt = ev.CreatedAt
+		}
+		if i >= 8 {
+			break
+		}
+		sum.RecentActivity = append(sum.RecentActivity, Activity{Type: ev.Type, Message: ev.Message, EntityID: ev.EntityID, CreatedAt: ev.CreatedAt})
+	}
+	if arr := st.ReviewSnapshots[tenantID]; len(arr) > 1 {
+		sum.PreviousHealthScore = arr[1].HealthScore
+		sum.HealthDelta = sum.HealthScore - arr[1].HealthScore
+		sum.UnresolvedDelta = sum.Unresolved - arr[1].UnresolvedIssues
+	}
+	if arr := st.ReviewSnapshots[tenantID]; len(arr) > 0 {
+		sum.ReviewCompletionStreak = reviewStreak(arr)
+	}
+	a := st.Activation[tenantID]
+	sum.ActivationChecklist = []MilestoneState{
+		{Key: "first_evidence_created", Label: "First evidence created", ReachedAt: a.FirstEvidenceCreatedAt},
+		{Key: "first_file_uploaded", Label: "First file uploaded", ReachedAt: a.FirstFileUploadedAt},
+		{Key: "first_reminder_run", Label: "First reminder run", ReachedAt: a.FirstReminderRunAt},
+		{Key: "first_proofpack_generated", Label: "First proofpack generated", ReachedAt: a.FirstProofpackGeneratedAt},
+		{Key: "first_operational_review", Label: "First operational review", ReachedAt: a.FirstOperationalReviewAt},
+		{Key: "second_weekly_review", Label: "Second weekly review", ReachedAt: a.SecondWeeklyReviewAt},
+	}
+}
+
+func calculateActivationPercent(checklist []MilestoneState) int {
+	if len(checklist) == 0 {
+		return 0
+	}
 	done := 0
-	for _, c := range sum.ActivationChecklist {
+	for _, c := range checklist {
 		if c.ReachedAt != nil {
 			done++
 		}
 	}
-	if len(sum.ActivationChecklist) > 0 {
-		sum.ActivationCompletionPercent = done * 100 / len(sum.ActivationChecklist)
-	}
-	sum.PilotMaturityStage = deriveStage(sum, len(items))
-	sum.Friction = frictionIndicators(sum, now)
-	sum.UpgradeSignals = upgradeSignals(sum, len(items))
+	return done * 100 / len(checklist)
+}
+
+func (s *Service) populateDerivedSignals(tenantID string, sum *Summary, items []evidence.Item, now time.Time) {
+	sum.PilotMaturityStage = deriveStage(*sum, len(items))
+	sum.Friction = frictionIndicators(*sum, now)
+	sum.UpgradeSignals = upgradeSignals(*sum, len(items))
 	sum.Trend7, sum.Trend30 = s.buildTrends(tenantID, sum.HealthScore)
-	sum.Usage = usageSignals(sum, len(sum.ProofpackHistory))
-	sum.FounderSignals = founderSignals(sum)
-	sum.Narratives = s.buildNarratives(tenantID, sum)
+	sum.Usage = usageSignals(*sum, len(sum.ProofpackHistory))
+	sum.FounderSignals = founderSignals(*sum)
+	sum.Narratives = s.buildNarratives(tenantID, *sum)
 	if !sum.LastReviewedAt.IsZero() {
 		sum.DaysSinceLastReview = int(now.Sub(sum.LastReviewedAt).Hours() / 24)
 	}
 	sum.PilotRitual = s.buildPilotRitual(tenantID, now)
-	return sum, nil
 }
 
 func (s *Service) buildNarratives(tenantID string, sum Summary) []Narrative {
