@@ -544,15 +544,15 @@ func applyCaps(g Graph, maxNodes, maxEdges int, now time.Time) Graph {
 		g.Edges = g.Edges[:k]
 
 		g.Nodes = append(g.Nodes, Node{
-			ID: "graph_cap:omitted_nodes",
-			Type: "action",
-			Label: "Graph output capped",
-			TenantID: g.TenantID,
-			Status: "degraded",
+			ID:        "graph_cap:omitted_nodes",
+			Type:      "action",
+			Label:     "Graph output capped",
+			TenantID:  g.TenantID,
+			Status:    "degraded",
 			CreatedAt: now,
 			UpdatedAt: now,
-			Summary: "Some nodes were omitted to keep graph output bounded.",
-			Metadata: map[string]any{"omitted_nodes": originalNodes - maxNodes, "max_nodes": maxNodes},
+			Summary:   "Some nodes were omitted to keep graph output bounded.",
+			Metadata:  map[string]any{"omitted_nodes": originalNodes - maxNodes, "max_nodes": maxNodes},
 		})
 		g.DegradedReasons = append(g.DegradedReasons, fmt.Sprintf("Graph node output capped at %d of %d nodes.", maxNodes, originalNodes))
 	}
