@@ -374,26 +374,41 @@ func action(typ, severity string, impact int, title, desc, rawTarget, nodeID, ro
 	return NextAction{ID: actionID(typ, rawTarget), Type: typ, Title: title, Description: desc, Severity: severity, Impact: impact, TargetNodeIDs: []string{nodeID}, Reason: reason, SuggestedRoute: route}
 }
 
-func summary(tenantID string, now time.Time, items []evidence.Item, data TenantData, actions []NextAction) Summary {
+type evidenceStats struct {
+	owners    int
+	ownerless int
+	expired   int
+	stale     int
+	risks     map[string]struct{}
+}
+
+func summarizeEvidenceInfo(now time.Time, items []evidence.Item) evidenceStats {
 	owners := map[string]struct{}{}
-	risks := map[string]struct{}{}
-	ownerless, expired, stale := 0, 0, 0
+	stats := evidenceStats{
+		risks: map[string]struct{}{},
+	}
+
 	for _, it := range items {
 		if it.IsOwnerless() {
-			ownerless++
+			stats.ownerless++
 		} else {
 			owners[strings.ToLower(strings.TrimSpace(it.OwnerEmail)+"|"+strings.TrimSpace(it.OwnerName))] = struct{}{}
 		}
 		if it.Status == "expired" {
-			expired++
+			stats.expired++
 		}
 		if it.IsStale(now) {
-			stale++
+			stats.stale++
 		}
 		for _, r := range it.RiskRefs {
-			risks[r] = struct{}{}
+			stats.risks[r] = struct{}{}
 		}
 	}
+	stats.owners = len(owners)
+	return stats
+}
+
+func deriveTopRisks(risks map[string]struct{}, expired, ownerless, stale int) []string {
 	topRisks := make([]string, 0, len(risks)+3)
 	for r := range risks {
 		topRisks = append(topRisks, r)
@@ -411,6 +426,10 @@ func summary(tenantID string, now time.Time, items []evidence.Item, data TenantD
 	if len(topRisks) > 5 {
 		topRisks = topRisks[:5]
 	}
+	return topRisks
+}
+
+func evaluateTenantData(data TenantData) (string, string, *time.Time) {
 	comparison := "not_comparable"
 	if len(data.ReviewSnapshots) >= 2 {
 		comparison = "active"
@@ -426,6 +445,10 @@ func summary(tenantID string, now time.Time, items []evidence.Item, data TenantD
 		t := data.ReviewSnapshots[0].LastReviewedAt
 		latest = &t
 	}
+	return comparison, readiness, latest
+}
+
+func extractTopActions(actions []NextAction) []string {
 	topActions := []string{}
 	for i, a := range actions {
 		if i >= 5 {
@@ -433,7 +456,30 @@ func summary(tenantID string, now time.Time, items []evidence.Item, data TenantD
 		}
 		topActions = append(topActions, a.Title)
 	}
-	return Summary{TotalEvidence: len(items), TotalOwners: len(owners), OwnerlessEvidence: ownerless, ExpiredEvidence: expired, StaleEvidence: stale, ProofpackCount: len(data.Proofpacks), ReviewCount: len(data.ReviewSnapshots), LatestReviewAt: latest, ComparisonState: comparison, PilotReadinessState: readiness, GraphHealthScore: graphHealth(now, items, data), TopRisks: topRisks, TopNextActions: topActions}
+	return topActions
+}
+
+func summary(tenantID string, now time.Time, items []evidence.Item, data TenantData, actions []NextAction) Summary {
+	stats := summarizeEvidenceInfo(now, items)
+	topRisks := deriveTopRisks(stats.risks, stats.expired, stats.ownerless, stats.stale)
+	comparison, readiness, latest := evaluateTenantData(data)
+	topActions := extractTopActions(actions)
+
+	return Summary{
+		TotalEvidence:       len(items),
+		TotalOwners:         stats.owners,
+		OwnerlessEvidence:   stats.ownerless,
+		ExpiredEvidence:     stats.expired,
+		StaleEvidence:       stats.stale,
+		ProofpackCount:      len(data.Proofpacks),
+		ReviewCount:         len(data.ReviewSnapshots),
+		LatestReviewAt:      latest,
+		ComparisonState:     comparison,
+		PilotReadinessState: readiness,
+		GraphHealthScore:    graphHealth(now, items, data),
+		TopRisks:            topRisks,
+		TopNextActions:      topActions,
+	}
 }
 
 func degradedReasons(items []evidence.Item, data TenantData, s Summary) []string {
