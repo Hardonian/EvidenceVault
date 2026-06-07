@@ -11,9 +11,9 @@ func TestMarkdown(t *testing.T) {
 	staticTime := time.Date(2023, 10, 31, 12, 0, 0, 0, time.UTC)
 
 	graph := Graph{
-		TenantID:        "tenant-xyz",
-		GeneratedAt:     staticTime,
-		GraphVersion:    "v1",
+		TenantID:     "tenant-xyz",
+		GeneratedAt:  staticTime,
+		GraphVersion: "v1",
 		Nodes: []Node{
 			{ID: "n1", Type: "policy", Status: "active", Label: "Access Policy"},
 			{ID: "n2", Type: "evidence", Status: "expired", Label: "Access Logs Q3"},
@@ -133,9 +133,9 @@ func TestMarkdown(t *testing.T) {
 
 	// Test case for empty degraded state and no next actions, critical gaps
 	emptyGraph := Graph{
-		TenantID:        "tenant-abc",
-		GeneratedAt:     staticTime,
-		GraphVersion:    "v1",
+		TenantID:     "tenant-abc",
+		GeneratedAt:  staticTime,
+		GraphVersion: "v1",
 		Summary: Summary{
 			ComparisonState:     "none",
 			PilotReadinessState: "not_ready",
@@ -219,9 +219,9 @@ func TestText(t *testing.T) {
 	staticTime := time.Date(2023, 10, 31, 12, 0, 0, 0, time.UTC)
 
 	graph := Graph{
-		TenantID:        "tenant-xyz",
-		GeneratedAt:     staticTime,
-		GraphVersion:    "v1",
+		TenantID:     "tenant-xyz",
+		GeneratedAt:  staticTime,
+		GraphVersion: "v1",
 	}
 
 	// We don't need a perfectly matching string for everything since we know Markdown() works.
