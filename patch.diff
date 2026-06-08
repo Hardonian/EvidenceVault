@@ -1,0 +1,10 @@
+--- internal/demo/seed.go
++++ internal/demo/seed.go
+@@ -68,7 +68,6 @@
+	}
+	if pp != nil {
+		_, _ = pp.Export(ctx, tenantID, "demo")
+-		_, _ = pp.Export(ctx, tenantID, "demo")
+	}
+	return nil
+ }

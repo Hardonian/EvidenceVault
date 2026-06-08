@@ -21,6 +21,10 @@ func NewService(store persistence.Store, sender email.Sender, auditSvc *audit.Se
 	return &Service{store: store, evidence: ev, email: sender, audit: auditSvc}
 }
 func (s *Service) Run(ctx context.Context) (int, error) {
+	items := s.evidence.All()
+	sent := 0
+	today := time.Now().UTC().Format("2006-01-02")
+	toSend := make([]evidence.Item, 0, len(items))
 	nowUTC := time.Now().UTC()
 	_ = s.store.Write(func(st *persistence.State) error {
 		for _, it := range items {
