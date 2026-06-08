@@ -54,7 +54,7 @@ func Seed(ctx context.Context, appEnv string, enabled bool, ev *evidence.Service
 	}
 	if pp != nil {
 		_, _ = pp.Export(ctx, tenantID, "demo")
-		_, _ = pp.Export(ctx, tenantID, "demo")
+	}
 	}
 	return nil
 }
