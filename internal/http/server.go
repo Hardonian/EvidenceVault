@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"html/template"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -57,9 +58,23 @@ func (s Server) Routes() http.Handler {
 }
 
 func (s Server) registerSystemRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/healthz", method(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200); _, _ = w.Write([]byte("ok")) }))
-	mux.HandleFunc("/readyz", method(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200); _, _ = w.Write([]byte("ready")) }))
-	mux.HandleFunc("/version", method(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(s.Version)) }))
+	mux.HandleFunc("/healthz", method(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(200)
+		if _, err := w.Write([]byte("ok")); err != nil {
+			log.Printf("failed to write response: %v", err)
+		}
+	}))
+	mux.HandleFunc("/readyz", method(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(200)
+		if _, err := w.Write([]byte("ready")); err != nil {
+			log.Printf("failed to write response: %v", err)
+		}
+	}))
+	mux.HandleFunc("/version", method(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := w.Write([]byte(s.Version)); err != nil {
+			log.Printf("failed to write response: %v", err)
+		}
+	}))
 	mux.HandleFunc("/", method(http.MethodGet, s.landing))
 }
 
@@ -255,7 +270,9 @@ func (s Server) createProofpack(w http.ResponseWriter, r *http.Request) {
 		s.Operations.RecordEvent(c.TenantID, "proofpack.generated", "Proofpack exported", "")
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(b)
+	if _, err := w.Write(b); err != nil {
+		log.Printf("failed to write response: %v", err)
+	}
 }
 func (s Server) runReminders(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Authorization") != "Bearer "+s.CronSecret {
@@ -341,14 +358,20 @@ func (s Server) exportEvidenceCSV(w http.ResponseWriter, r *http.Request) {
 		b.WriteString("# WARNING: EPHEMERAL MEMORY - UNTRUSTED PROVENANCE\n")
 	}
 	cw := csv.NewWriter(&b)
-	_ = cw.Write([]string{"id", "title", "category", "status", "owner_name", "owner_email", "updated_at"})
+	if err := cw.Write([]string{"id", "title", "category", "status", "owner_name", "owner_email", "updated_at"}); err != nil {
+		log.Printf("failed to write csv: %v", err)
+	}
 	for _, it := range items {
-		_ = cw.Write([]string{it.ID, it.Title, it.Category, it.Status, it.OwnerName, it.OwnerEmail, it.UpdatedAt.Format(time.RFC3339)})
+		if err := cw.Write([]string{it.ID, it.Title, it.Category, it.Status, it.OwnerName, it.OwnerEmail, it.UpdatedAt.Format(time.RFC3339)}); err != nil {
+			log.Printf("failed to write csv: %v", err)
+		}
 	}
 	cw.Flush()
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="evidence.csv"`)
-	_, _ = w.Write(b.Bytes())
+	if _, err := w.Write(b.Bytes()); err != nil {
+		log.Printf("failed to write response: %v", err)
+	}
 }
 
 func (s Server) exportReviewCSV(w http.ResponseWriter, r *http.Request) {
@@ -366,14 +389,20 @@ func (s Server) exportReviewCSV(w http.ResponseWriter, r *http.Request) {
 		b.WriteString("# WARNING: EPHEMERAL MEMORY - UNTRUSTED PROVENANCE\n")
 	}
 	cw := csv.NewWriter(&b)
-	_ = cw.Write([]string{"generated_at", "health_score", "unresolved", "expired", "expiring_soon", "missing_owner", "stale_evidence", "maturity_stage"})
+	if err := cw.Write([]string{"generated_at", "health_score", "unresolved", "expired", "expiring_soon", "missing_owner", "stale_evidence", "maturity_stage"}); err != nil {
+		log.Printf("failed to write csv: %v", err)
+	}
 	for _, s := range snaps {
-		_ = cw.Write([]string{time.Now().UTC().Format(time.RFC3339), intToStr(s.HealthScore), intToStr(s.Unresolved), intToStr(s.Expired), intToStr(s.ExpiringSoon), intToStr(s.MissingOwner), intToStr(s.StaleEvidence), s.PilotMaturityStage})
+		if err := cw.Write([]string{time.Now().UTC().Format(time.RFC3339), intToStr(s.HealthScore), intToStr(s.Unresolved), intToStr(s.Expired), intToStr(s.ExpiringSoon), intToStr(s.MissingOwner), intToStr(s.StaleEvidence), s.PilotMaturityStage}); err != nil {
+			log.Printf("failed to write csv: %v", err)
+		}
 	}
 	cw.Flush()
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", `attachment; filename="review_snapshots.csv"`)
-	_, _ = w.Write(b.Bytes())
+	if _, err := w.Write(b.Bytes()); err != nil {
+		log.Printf("failed to write response: %v", err)
+	}
 }
 func intToStr(n int) string { return strconv.Itoa(n) }
 
@@ -399,7 +428,9 @@ func (s Server) exportNarrativesMarkdown(w http.ResponseWriter, r *http.Request)
 		b.WriteString("- No review history yet. Generate your first weekly snapshot to start continuity memory.\n")
 	}
 	w.Header().Set("Content-Type", "text/markdown")
-	_, _ = w.Write([]byte(b.String()))
+	if _, err := w.Write([]byte(b.String())); err != nil {
+		log.Printf("failed to write response: %v", err)
+	}
 }
 
 func (s Server) exportReviewComparisonMarkdown(w http.ResponseWriter, r *http.Request) {
@@ -417,11 +448,15 @@ func (s Server) exportReviewComparison(w http.ResponseWriter, r *http.Request, m
 	if err != nil {
 		if md {
 			w.Header().Set("Content-Type", "text/markdown")
-			_, _ = w.Write([]byte("# Review Comparison\n\nNo comparison available yet. Generate at least two weekly reviews to unlock historical comparison.\n"))
+			if _, err := w.Write([]byte("# Review Comparison\n\nNo comparison available yet. Generate at least two weekly reviews to unlock historical comparison.\n")); err != nil {
+				log.Printf("failed to write response: %v", err)
+			}
 			return
 		}
 		w.Header().Set("Content-Type", "text/plain")
-		_, _ = w.Write([]byte("Review comparison unavailable: generate at least two weekly reviews first.\n"))
+		if _, err := w.Write([]byte("Review comparison unavailable: generate at least two weekly reviews first.\n")); err != nil {
+			log.Printf("failed to write response: %v", err)
+		}
 		return
 	}
 	if md {
@@ -431,7 +466,9 @@ func (s Server) exportReviewComparison(w http.ResponseWriter, r *http.Request, m
 			b.WriteString("> [!WARNING]\n> **EPHEMERAL MEMORY - UNTRUSTED PROVENANCE**\n\n")
 		}
 		b.WriteString(cmp.Markdown())
-		_, _ = w.Write([]byte(b.String()))
+		if _, err := w.Write([]byte(b.String())); err != nil {
+			log.Printf("failed to write response: %v", err)
+		}
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain")
@@ -440,7 +477,9 @@ func (s Server) exportReviewComparison(w http.ResponseWriter, r *http.Request, m
 		b.WriteString("WARNING: EPHEMERAL MEMORY - UNTRUSTED PROVENANCE\n\n")
 	}
 	b.WriteString(cmp.PlainText())
-	_, _ = w.Write([]byte(b.String()))
+	if _, err := w.Write([]byte(b.String())); err != nil {
+		log.Printf("failed to write response: %v", err)
+	}
 }
 
 func (s Server) exportPilotProofMarkdown(w http.ResponseWriter, r *http.Request) {
@@ -509,9 +548,13 @@ func (s Server) exportPilotProof(w http.ResponseWriter, r *http.Request, md bool
 	if !md {
 		out = strings.ReplaceAll(out, "- ", "* ")
 		w.Header().Set("Content-Type", "text/plain")
-		_, _ = w.Write([]byte(out))
+		if _, err := w.Write([]byte(out)); err != nil {
+			log.Printf("failed to write response: %v", err)
+		}
 		return
 	}
 	w.Header().Set("Content-Type", "text/markdown")
-	_, _ = w.Write([]byte(out))
+	if _, err := w.Write([]byte(out)); err != nil {
+		log.Printf("failed to write response: %v", err)
+	}
 }
