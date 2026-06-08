@@ -184,9 +184,9 @@ func (s *Service) Update(_ context.Context, tenantID, idv string, it Item) error
 
 func normalizeRefs(refs []string) []string {
 	seen := map[string]struct{}{}
-	out := []string{}
+	out := make([]string, 0, len(refs))
 	for _, ref := range refs {
-		clean := strings.Join(strings.Fields(ref), " ")
+		clean := strings.TrimSpace(ref)
 		if clean == "" {
 			continue
 		}
@@ -222,11 +222,16 @@ func (s *Service) Files(tenantID string) []File {
 	})
 	return out
 }
-func (s *Service) All() []Item {
+func (s *Service) All(filter func(Item) bool) []Item {
 	out := []Item{}
 	_ = s.store.Read(func(st *persistence.State) error {
 		for _, arr := range st.Evidence {
-			out = append(out, toItems(arr)...)
+			for _, persistItem := range arr {
+				it := Item(persistItem)
+				if filter == nil || filter(it) {
+					out = append(out, it)
+				}
+			}
 		}
 		return nil
 	})
