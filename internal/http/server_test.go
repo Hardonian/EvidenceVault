@@ -202,3 +202,36 @@ func TestEmptyTenantGraphDegrades(t *testing.T) {
 		t.Fatal("expected degraded state in empty tenant graph")
 	}
 }
+
+func TestBuildEvidenceGraphNilBuilder(t *testing.T) {
+	s, _ := testServer(t)
+	s.EvidenceGraph = nil
+	r := s.Routes()
+	req := httptest.NewRequest(http.MethodGet, "/app/api/evidence-graph", nil)
+	req.Header.Set("X-Tenant-ID", "t")
+	req.Header.Set("X-User-ID", "u")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 Service Unavailable, got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "evidence graph unavailable") {
+		t.Fatalf("unexpected body: %s", w.Body.String())
+	}
+}
+
+func TestBuildEvidenceGraphBuildError(t *testing.T) {
+	_, r := testServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/app/api/evidence-graph", nil)
+	// Empty tenant ID causes build error
+	req.Header.Set("X-Tenant-ID", "   ")
+	req.Header.Set("X-User-ID", "u")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request, got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "tenant id is required") {
+		t.Fatalf("unexpected body: %s", w.Body.String())
+	}
+}
