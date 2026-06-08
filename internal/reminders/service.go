@@ -22,34 +22,22 @@ func NewService(store persistence.Store, sender email.Sender, auditSvc *audit.Se
 }
 func (s *Service) Run(ctx context.Context) (int, error) {
 	nowUTC := time.Now().UTC()
-	items := s.evidence.All(func(it evidence.Item) bool {
-		if it.OwnerEmail == "" || it.ExpiryDate == nil {
-			return false
-		}
-		if it.ExpiryDate.UTC().Before(nowUTC) || it.ExpiryDate.UTC().After(nowUTC.AddDate(0, 0, it.ReminderDaysBefore)) {
-			return false
-		}
-		return true
-	})
-
-	sent := 0
-	today := nowUTC.Format("2006-01-02")
-	toSend := make([]evidence.Item, 0, len(items))
-
-	for _, it := range items {
-		k := it.ID + ":" + today
-		dup := false
-		_ = s.store.Write(func(st *persistence.State) error {
-			_, dup = st.ReminderSent[k]
-			if !dup {
-				st.ReminderSent[k] = struct{}{}
+	_ = s.store.Write(func(st *persistence.State) error {
+		for _, it := range items {
+			if it.OwnerEmail == "" || it.ExpiryDate == nil {
+				continue
 			}
-			return nil
-		})
-		if !dup {
-			toSend = append(toSend, it)
+			if it.ExpiryDate.UTC().Before(nowUTC) || it.ExpiryDate.UTC().After(nowUTC.AddDate(0, 0, it.ReminderDaysBefore)) {
+				continue
+			}
+			k := it.ID + ":" + today
+			if _, dup := st.ReminderSent[k]; !dup {
+				st.ReminderSent[k] = struct{}{}
+				toSend = append(toSend, it)
+			}
 		}
-	}
+		return nil
+	})
 
 	for _, it := range toSend {
 		status := "sent"
