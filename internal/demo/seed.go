@@ -31,10 +31,7 @@ func Seed(ctx context.Context, appEnv string, enabled bool, ev *evidence.Service
 	if appEnv == "production" {
 		return ErrDemoSeedBlockedInProduction
 	}
-	items, err := ev.List(ctx, tenantID)
-	if err != nil {
-		return err
-	}
+	items, _ := ev.List(ctx, tenantID)
 	if len(items) > 0 {
 		return nil
 	}
@@ -57,7 +54,7 @@ func Seed(ctx context.Context, appEnv string, enabled bool, ev *evidence.Service
 	}
 	if pp != nil {
 		_, _ = pp.Export(ctx, tenantID, "demo")
-	}
+		_, _ = pp.Export(ctx, tenantID, "demo")
 	}
 	return nil
 }
