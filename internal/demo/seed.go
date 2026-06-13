@@ -56,11 +56,10 @@ func Seed(ctx context.Context, appEnv string, enabled bool, ev *evidence.Service
 		simulateWeek4(ctx, tenantID, ev, ops, data)
 	}
 	if pp != nil {
-		_, _ = pp.Export(ctx, tenantID, "demo")
+			_, _ = pp.Export(ctx, tenantID, "demo")
+		}
+		return nil
 	}
-	}
-	return nil
-}
 
 func createEvidence(ctx context.Context, tenantID string, ev *evidence.Service, data *demoData) {
 	// Create diverse evidence across categories and risk states.

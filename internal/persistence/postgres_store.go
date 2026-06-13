@@ -284,39 +284,160 @@ func (p *PostgresStore) loadReminderSent(tx *sqlx.Tx, target *map[string]struct{
 }
 
 func (p *PostgresStore) persistState(tx *sqlx.Tx, state *State) error {
-	if err := p.upsertJSON(tx, "evidence_items", "tenant_id", state.Evidence); err != nil {
+	// Convert Evidence to map[string][]any
+	evidenceAny := make(map[string][]any)
+	for k, v := range state.Evidence {
+		items := make([]any, len(v))
+		for i, item := range v {
+			items[i] = item
+		}
+		evidenceAny[k] = items
+	}
+	if err := p.upsertJSON(tx, "evidence_items", "tenant_id", evidenceAny); err != nil {
 		return err
 	}
-	if err := p.upsertJSON(tx, "evidence_files", "tenant_id", state.EvidenceFile); err != nil {
+
+	// Convert EvidenceFile to map[string][]any
+	evidenceFileAny := make(map[string][]any)
+	for k, v := range state.EvidenceFile {
+		items := make([]any, len(v))
+		for i, item := range v {
+			items[i] = item
+		}
+		evidenceFileAny[k] = items
+	}
+	if err := p.upsertJSON(tx, "evidence_files", "tenant_id", evidenceFileAny); err != nil {
 		return err
 	}
+
 	if err := p.upsertSimple(tx, "audit_logs", state.AuditLogs); err != nil {
 		return err
 	}
-	if err := p.upsertMap(tx, "proofpacks", state.Proofpacks); err != nil {
+
+	// Convert Proofpacks to map[string][]map[string]any
+	proofpacksAny := make(map[string][]map[string]any)
+	for k, v := range state.Proofpacks {
+		items := make([]map[string]any, len(v))
+		for i, item := range v {
+			b, _ := json.Marshal(item)
+			var m map[string]any
+			json.Unmarshal(b, &m)
+			items[i] = m
+		}
+		proofpacksAny[k] = items
+	}
+	if err := p.upsertMap(tx, "proofpacks", proofpacksAny); err != nil {
 		return err
 	}
-	if err := p.upsertMap(tx, "review_snapshots", state.ReviewSnapshots); err != nil {
+
+	// Convert ReviewSnapshots
+	reviewSnapshotsAny := make(map[string][]map[string]any)
+	for k, v := range state.ReviewSnapshots {
+		items := make([]map[string]any, len(v))
+		for i, item := range v {
+			b, _ := json.Marshal(item)
+			var m map[string]any
+			json.Unmarshal(b, &m)
+			items[i] = m
+		}
+		reviewSnapshotsAny[k] = items
+	}
+	if err := p.upsertMap(tx, "review_snapshots", reviewSnapshotsAny); err != nil {
 		return err
 	}
-	if err := p.upsertMap(tx, "operational_events", state.OperationalEvents); err != nil {
+
+	// Convert OperationalEvents
+	operationalEventsAny := make(map[string][]map[string]any)
+	for k, v := range state.OperationalEvents {
+		items := make([]map[string]any, len(v))
+		for i, item := range v {
+			b, _ := json.Marshal(item)
+			var m map[string]any
+			json.Unmarshal(b, &m)
+			items[i] = m
+		}
+		operationalEventsAny[k] = items
+	}
+	if err := p.upsertMap(tx, "operational_events", operationalEventsAny); err != nil {
 		return err
 	}
-	if err := p.upsertMap(tx, "activation_milestones", state.Activation); err != nil {
+
+	// Convert Activation
+	activationAny := make(map[string][]map[string]any)
+	for k, v := range state.Activation {
+		b, _ := json.Marshal(v)
+		var m map[string]any
+		json.Unmarshal(b, &m)
+		activationAny[k] = []map[string]any{m}
+	}
+	if err := p.upsertMap(tx, "activation_milestones", activationAny); err != nil {
 		return err
 	}
-	if err := p.upsertMap(tx, "operational_snapshots", state.OperationalSnapshots); err != nil {
+
+	// Convert OperationalSnapshots
+	operationalSnapshotsAny := make(map[string][]map[string]any)
+	for k, v := range state.OperationalSnapshots {
+		items := make([]map[string]any, len(v))
+		for i, item := range v {
+			b, _ := json.Marshal(item)
+			var m map[string]any
+			json.Unmarshal(b, &m)
+			items[i] = m
+		}
+		operationalSnapshotsAny[k] = items
+	}
+	if err := p.upsertMap(tx, "operational_snapshots", operationalSnapshotsAny); err != nil {
 		return err
 	}
-	if err := p.upsertMap(tx, "review_reports", state.ReviewReports); err != nil {
+
+	// Convert ReviewReports
+	reviewReportsAny := make(map[string][]map[string]any)
+	for k, v := range state.ReviewReports {
+		items := make([]map[string]any, len(v))
+		for i, item := range v {
+			b, _ := json.Marshal(item)
+			var m map[string]any
+			json.Unmarshal(b, &m)
+			items[i] = m
+		}
+		reviewReportsAny[k] = items
+	}
+	if err := p.upsertMap(tx, "review_reports", reviewReportsAny); err != nil {
 		return err
 	}
-	if err := p.upsertMap(tx, "unresolved_issues", state.UnresolvedIssues); err != nil {
+
+	// Convert UnresolvedIssues
+	unresolvedIssuesAny := make(map[string][]map[string]any)
+	for k, v := range state.UnresolvedIssues {
+		items := make([]map[string]any, len(v))
+		for i, item := range v {
+			b, _ := json.Marshal(item)
+			var m map[string]any
+			json.Unmarshal(b, &m)
+			items[i] = m
+		}
+		unresolvedIssuesAny[k] = items
+	}
+	if err := p.upsertMap(tx, "unresolved_issues", unresolvedIssuesAny); err != nil {
 		return err
 	}
-	if err := p.upsertMap(tx, "adjudication_events", state.AdjudicationEvents); err != nil {
+
+	// Convert AdjudicationEvents
+	adjudicationEventsAny := make(map[string][]map[string]any)
+	for k, v := range state.AdjudicationEvents {
+		items := make([]map[string]any, len(v))
+		for i, item := range v {
+			b, _ := json.Marshal(item)
+			var m map[string]any
+			json.Unmarshal(b, &m)
+			items[i] = m
+		}
+		adjudicationEventsAny[k] = items
+	}
+	if err := p.upsertMap(tx, "adjudication_events", adjudicationEventsAny); err != nil {
 		return err
 	}
+
 	if err := p.upsertTenants(tx, state.Tenants); err != nil {
 		return err
 	}
