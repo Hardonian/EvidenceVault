@@ -10,6 +10,12 @@
     <meta property="og:description" content="Automate evidence collection, review, and proofpack export for SOC 2, ISO 27001, HIPAA." />
     <meta property="og:type" content="website" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Basic analytics: page view tracking (replace with Plausible/Fathom when ready) -->
+    <script>
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            console.log('EvidenceVault landing page viewed:', window.location.href);
+        }
+    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         * { font-family: 'Inter', system-ui, sans-serif; }
