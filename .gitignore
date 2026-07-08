@@ -30,3 +30,23 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# --- Hardonian bootstrap kit ---
+# Hardonian standard ignores
+.env.*
+!.env.example
+!.env.template
+__pycache__/
+*.pyc
+.venv/
+venv/
+node_modules/
+dist/
+build/
+target/
+*.log
+.DS_Store
+.idea/
+.vscode/
+.coverage
+htmlcov/
