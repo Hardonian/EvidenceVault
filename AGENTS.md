@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Project
-- Name: $repo
+- Name: EvidenceVault
 - Primary branch: mainsa
 - Owner: Hardonian / AI Automated Systems
 - Deploy: not configured
