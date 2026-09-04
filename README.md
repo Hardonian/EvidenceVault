@@ -1,5 +1,9 @@
 # EvidenceVault
 
+<!-- BEGIN: REPO HERO -->
+![EvidenceVault — hero generated locally on the GPU stack](assets/repo-hero.png)
+<!-- END: REPO HERO -->
+
 EvidenceVault is a deterministic compliance-operations system for small teams that need auditable continuity, weekly review discipline, and portable proof exports.
 
 Purpose: Top-level product and repository truth.
